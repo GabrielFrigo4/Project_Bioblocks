@@ -510,7 +510,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 28,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer28",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer28",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -564,7 +564,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 31,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer31",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer31",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -679,7 +679,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "AminoacidQuestionDatabase",
-            questionText = "O pK de um grupamento ionizável em um aminoácido representa:",
+            questionText = "O que represente o pK de um grupamento ionizável em um aminoácido?",
             answers = new string[] {
                 "O pH em que o grupamento está completamente protonado.",
                 "O pH em que o grupamento está completamente desprotonado.",
@@ -697,7 +697,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "AminoacidQuestionDatabase",
-            questionText = "Em uma curva de titulação de um aminoácido, o pI é:",
+            questionText = "O que representa o pI de um aminoácido?:",
             answers = new string[] {
                 "O pH em que ocorre a primeira dissociação.",
                 "O pH em que ocorre a última dissociação.",
@@ -798,7 +798,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 44,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer44",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer44",
             questionLevel = 2,
             questionInDevelopment = false
         },

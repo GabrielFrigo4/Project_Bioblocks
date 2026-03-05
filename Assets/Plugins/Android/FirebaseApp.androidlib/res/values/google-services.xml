@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@string/gcm_defaultSenderId,@string/google_storage_bucket,@string/project_id,@string/google_api_key,@string/google_crash_reporting_api_key,@string/google_app_id,@string/default_android_client_id,@string/default_web_client_id">
+  <string name="gcm_defaultSenderId" translatable="false">151323225816</string>
+  <string name="google_storage_bucket" translatable="false">microlearning-33132.firebasestorage.app</string>
+  <string name="project_id" translatable="false">microlearning-33132</string>
+  <string name="google_api_key" translatable="false">AIzaSyBfnKgoTQ676pYcf0RHR6JBe__XZtz8nsc</string>
+  <string name="google_crash_reporting_api_key" translatable="false">AIzaSyBfnKgoTQ676pYcf0RHR6JBe__XZtz8nsc</string>
+  <string name="google_app_id" translatable="false">1:151323225816:android:d2385e17288ebdb8a231ad</string>
+  <string name="default_android_client_id" translatable="false">151323225816-8snntp5fjsn58phnee90qtmact26tmuq.apps.googleusercontent.com</string>
+  <string name="default_web_client_id" translatable="false">151323225816-9lvcfaq3s9qppuvu83ubn5lsfr6blasb.apps.googleusercontent.com</string>
+</resources>
