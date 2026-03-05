@@ -18,15 +18,16 @@ public class RankingManager : MonoBehaviour
     [SerializeField] private TMP_Text weekResetCountdownText;
     private WeekResetCountdown resetCountdown;
 
-    [Header("Sync Status")]
-    [SerializeField] private GameObject syncIndicator;
+    [Header("Loading Status")]
+    [SerializeField] private GameObject loadingIndicator;
     [SerializeField] private TMP_Text lastUpdateText;
 
     protected UserData currentUserData;
     protected List<Ranking> rankings;
     protected IRankingRepository rankingRepository;
 
-    private bool isLoadingFromCache = false;
+    private DateTime lastFetchTime = DateTime.MinValue;
+    private bool isFetching = false;
 
     protected virtual void Start()
     {
@@ -38,7 +39,6 @@ public class RankingManager : MonoBehaviour
 
         InitializeRepository();
         InitializeWeekResetCountdown();
-        SubscribeToSyncEvents();
     }
 
     private void InitializeWeekResetCountdown()
@@ -50,17 +50,10 @@ public class RankingManager : MonoBehaviour
         }
     }
 
-    private void SubscribeToSyncEvents()
-    {
-        RankingSyncManager.Instance.OnSyncStarted += OnSyncStarted;
-        RankingSyncManager.Instance.OnSyncCompleted += OnSyncCompleted;
-    }
-
     protected virtual void InitializeRepository()
     {
         if (BioBlocksSettings.Instance.IsDebugMode())
         {
-            Debug.Log("BioBlocks: Usando dados mock para desenvolvimento");
             rankingRepository = new MockRankingRepository();
             _ = InitializeRankingManager();
             return;
@@ -86,15 +79,13 @@ public class RankingManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("User data not loaded. Redirecting to Login.");
+            Debug.LogError("User data not loaded.");
         }
     }
 
     protected virtual void OnDestroy()
     {
         UserDataStore.OnUserDataChanged -= OnUserDataChanged;
-        RankingSyncManager.Instance.OnSyncStarted -= OnSyncStarted;
-        RankingSyncManager.Instance.OnSyncCompleted -= OnSyncCompleted;
     }
 
     protected virtual void OnUserDataChanged(UserData userData)
@@ -105,101 +96,66 @@ public class RankingManager : MonoBehaviour
 
     public virtual async Task FetchRankings()
     {
+        if (isFetching)
+        {
+            Debug.LogWarning("Já existe uma busca de rankings em andamento.");
+            return;
+        }
+
         try
         {
-            ShowSyncIndicator(false);
+            isFetching = true;
+            ShowLoadingIndicator(true);
             
-            isLoadingFromCache = true;
-            rankings = await RankingSyncManager.Instance.GetRankingsWithCache();
-            isLoadingFromCache = false;
-            if (rankings == null) rankings = new List<Ranking>();
+            rankings = await rankingRepository.GetRankingsAsync();
+            lastFetchTime = DateTime.UtcNow;
 
-            Debug.Log($"Total de rankings obtidos: {rankings.Count}");
-
-            if (rankings.Count > 0)
+            if (rankings != null && rankings.Count > 0)
             {
                 rankings = rankings
                     .OrderByDescending(r => r.userScore)
                     .ThenByDescending(r => r.userWeekScore)
                     .ToList();
 
-                Debug.Log("Rankings ordenados por WeekScore com desempate pelo TotalScore");
-
                 UpdateRankingTable();
-                UpdateLastSyncTime();
+                UpdateLastFetchTime();
             }
             else
             {
-                Debug.LogWarning("Nenhum ranking foi adicionado à lista!");
+                Debug.LogWarning("Nenhum ranking foi obtido!");
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"Erro ao buscar rankings: {e.Message}");
+            Debug.LogError($"Erro ao buscar rankings: {e.Message}\n{e.StackTrace}");
             rankings = new List<Ranking>();
         }
         finally
         {
-            isLoadingFromCache = false;
-            ShowSyncIndicator(false);
+            isFetching = false;
+            ShowLoadingIndicator(false);
         }
     }
 
-    private void OnSyncStarted()
+    private void ShowLoadingIndicator(bool show)
     {
-        if (!isLoadingFromCache)
+        if (loadingIndicator != null)
         {
-            ShowSyncIndicator(false);
+            loadingIndicator.SetActive(show);
         }
     }
 
-    private void OnSyncCompleted(bool success)
-    {
-        ShowSyncIndicator(false);
-        
-        if (success)
-        {
-            _ = RefreshRankingsFromCache();
-        }
-    }
-
-    private async Task RefreshRankingsFromCache()
-    {
-        var localRepo = new LocalRankingRepository();
-        var cachedRankings = localRepo.GetAllRankings();
-        
-        rankings = cachedRankings.Select(e => RankingDTO.ToRanking(e)).ToList();
-        
-        rankings = rankings
-            .OrderByDescending(r => r.userScore)
-            .ThenByDescending(r => r.userWeekScore)
-            .ToList();
-        
-        UpdateRankingTable();
-        UpdateLastSyncTime();
-    }
-
-    private void ShowSyncIndicator(bool show)
-    {
-        if (syncIndicator != null)
-        {
-            syncIndicator.SetActive(show);
-        }
-    }
-
-    private void UpdateLastSyncTime()
+    private void UpdateLastFetchTime()
     {
         if (lastUpdateText != null)
         {
-            var lastSync = RankingSyncManager.Instance.GetLastSyncTime();
-            
-            if (lastSync == DateTime.MinValue)
+            if (lastFetchTime == DateTime.MinValue)
             {
-                lastUpdateText.text = "Nunca sincronizado";
+                lastUpdateText.text = "Nunca atualizado";
             }
             else
             {
-                var timeSince = DateTime.UtcNow - lastSync;
+                var timeSince = DateTime.UtcNow - lastFetchTime;
                 
                 if (timeSince.TotalMinutes < 1)
                 {
@@ -229,8 +185,6 @@ public class RankingManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"Atualizando ranking table com {rankings.Count} rankings");
-        
         foreach (Transform child in rankingTableContent)
         {
             Destroy(child.gameObject);
@@ -306,12 +260,11 @@ public class RankingManager : MonoBehaviour
 
     public virtual void Navigate(string sceneName)
     {
-        Debug.Log($"Navigating to {sceneName}");
         NavigationManager.Instance.NavigateTo(sceneName);
     }
 
     public async void OnRefreshButtonClicked()
     {
-        await RankingSyncManager.Instance.ForceRefresh();
+        await FetchRankings();
     }
 }

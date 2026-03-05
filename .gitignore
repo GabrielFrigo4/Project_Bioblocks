@@ -8,12 +8,6 @@ Assets/StreamingAssets/google-services-desktop
 **/google-services.json.meta
 **/GoogleService-Info.plist.meta
 
-# iOS/tvOS Plugins (gerados automaticamente)
-Assets/Plugins/iOS/
-Assets/Plugins/iOS/Firebase/
-Assets/Plugins/tvOS/Firebase.meta
-Assets/Plugins/tvOS/Firebase/*.meta
-
 # StreamingAssets com credenciais
 Assets/StreamingAssets/google-services-desktop.json
 Assets/StreamingAssets/google-services-desktop.json.meta
@@ -34,6 +28,12 @@ Assets/GeneratedLocalRepo/
 Assets/ExternalDependencyManager/Editor/AndroidResolverDependencies.xml
 Assets/ExternalDependencyManager/Editor/IOSResolverDependencies.xml
 Assets/ExternalDependencyManager/Editor/GoogleVersionHandlerVersion.txt
+
+# ===========================
+# Android Firebase auto-generated
+# ===========================
+Assets/Plugins/Android/FirebaseApp.androidlib/
+Assets/Plugins/Android/FirebaseApp.androidlib.meta
 
 # ===========================
 # External Dependency Manager (EDM4U)
@@ -68,6 +68,10 @@ Desktop.ini
 *.a
 **/Assets/Plugins/iOS/**/*.a
 **/Assets/Plugins/tvOS/**/*.a
+Assets/Plugins/iOS/
+Assets/Plugins/iOS/Firebase/
+Assets/Plugins/tvOS/
+Assets/Plugins/tvOS.meta
 
 # ===========================
 # Build folders

@@ -175,7 +175,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "AminoacidQuestionDatabase",
-            questionText = "A Isoleucina é um aminoácido alifático com pK1 = 2,3 e pK2, = 9,8. Qual é o estado de protonação predominante da Isoleucina em pH = 1.",
+            questionText = "",
             answers = new string[] {
                 "AnswerImages/AminoacidsDB/aminoacid_images/isoleucina",
                 "AnswerImages/AminoacidsDB/aminoacid_images/isoleucina_zw",
@@ -185,15 +185,15 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             correctIndex = 2,
             questionNumber = 10,
             isImageAnswer = true,
-            isImageQuestion = false,
-            questionImagePath = "",
+            isImageQuestion = true,
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer10",
             questionLevel = 2,
-            questionInDevelopment = false
+            questionInDevelopment = true
         },
          new Question
         {
             questionDatabankName = "AminoacidQuestionDatabase",
-            questionText = "A Prolina é um aminoácido cíclico com pK1 = 2,0 e pK2, = 10,6. Qual é o estado de protonação predominante da Prolina em pH = 6,3.",
+            questionText = "",
             answers = new string[] {
                 "AnswerImages/AminoacidsDB/aminoacid_images/prolina",
                 "AnswerImages/AminoacidsDB/aminoacid_images/prolina_zw",
@@ -203,10 +203,10 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             correctIndex = 1,
             questionNumber = 11,
             isImageAnswer = true,
-            isImageQuestion = false,
-            questionImagePath = "",
+            isImageQuestion = true,
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer11",
             questionLevel = 2,
-            questionInDevelopment = false
+            questionInDevelopment = true
         },
         new Question
         {
@@ -222,7 +222,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 12,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer12",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer12",
             questionLevel = 3,
             questionInDevelopment = false
         },
@@ -240,7 +240,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 13,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer13",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer13",
             questionLevel = 3,
             questionInDevelopment = false
         },
@@ -510,7 +510,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 28,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer28",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer28",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -564,7 +564,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 31,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer31",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer31",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -582,7 +582,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 32,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer32",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer32",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -679,7 +679,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "AminoacidQuestionDatabase",
-            questionText = "O pK de um grupamento ionizável em um aminoácido representa:",
+            questionText = "O que represente o pK de um grupamento ionizável em um aminoácido?",
             answers = new string[] {
                 "O pH em que o grupamento está completamente protonado.",
                 "O pH em que o grupamento está completamente desprotonado.",
@@ -697,7 +697,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "AminoacidQuestionDatabase",
-            questionText = "Em uma curva de titulação de um aminoácido, o pI é:",
+            questionText = "O que representa o pI de um aminoácido?:",
             answers = new string[] {
                 "O pH em que ocorre a primeira dissociação.",
                 "O pH em que ocorre a última dissociação.",
@@ -744,7 +744,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 41,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer41",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer41",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -762,7 +762,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 42,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer42",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer42",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -780,7 +780,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 43,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer43",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer43",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -798,7 +798,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 44,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer44",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer44",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -852,7 +852,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 47,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer47",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer47",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -870,7 +870,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 48,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "AnswerImages/AminoacidsDB/imageQuestionContainer48",
+            questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer48",
             questionLevel = 2,
             questionInDevelopment = false
         },
