@@ -31,6 +31,7 @@ public class QuestionScoreManager : MonoBehaviour
         }
     }
 
+    
     public async Task UpdateScore(int scoreChange, bool isCorrect, Question answeredQuestion, IQuestionDatabase database = null)
     {
         try
@@ -40,18 +41,18 @@ public class QuestionScoreManager : MonoBehaviour
                 Debug.LogError("Usuário não autenticado");
                 return;
             }
-
+    
             string userId = AuthenticationRepository.Instance.Auth.CurrentUser.UserId;
             UserData userData = await FirestoreRepository.Instance.GetUserData(userId);
-
+    
             if (userData == null)
             {
                 Debug.LogError("Dados do usuário não encontrados");
                 return;
             }
-
+    
             int actualScoreChange = scoreChange;
-            
+    
             if (isCorrect && UserHeaderManager.Instance != null && UserHeaderManager.Instance.IsAnyBonusActive())
             {
                 actualScoreChange = UserHeaderManager.Instance.ApplyTotalBonus(scoreChange);
@@ -61,17 +62,18 @@ public class QuestionScoreManager : MonoBehaviour
                 actualScoreChange = questionBonusManager.ApplyBonusToScore(scoreChange);
             }
 
+            actualScoreChange = ClampScoreChange(userData.Score, actualScoreChange);
+    
             if (isCorrect)
             {
                 string databankName = answeredQuestion.questionDatabankName;
                 int questionNumber = answeredQuestion.questionNumber;
-
+    
                 try
                 {
                     if (database != null && database.IsDatabaseInDevelopment())
                     {
                         await SafeAnsweredQuestionsManager.Instance.MarkQuestionAsAnswered(questionNumber, database);
-                        
                         Debug.Log($"[QuestionScoreManager] Modo DEV - Questão {questionNumber} NÃO salva no Firebase");
                     }
                     else
@@ -83,14 +85,14 @@ public class QuestionScoreManager : MonoBehaviour
                             databankName,
                             true
                         );
-
+    
                         if (answeredQuestionsManager != null && answeredQuestionsManager.IsManagerInitialized)
                         {
                             await answeredQuestionsManager.ForceUpdate();
                         }
-
+    
                         bool isDatabankReset = UserDataStore.IsDatabankReset(databankName);
-                                
+    
                         if (!isDatabankReset && PlayerLevelManager.Instance != null)
                         {
                             await PlayerLevelManager.Instance.IncrementTotalAnswered();
@@ -131,11 +133,11 @@ public class QuestionScoreManager : MonoBehaviour
                     Debug.LogError($"Falha ao atualizar o score no Firestore: {ex.Message}");
                 }
             }
-
+    
             if (database == null || !database.IsDatabaseInDevelopment())
             {
                 UserData updatedUserData = await FirestoreRepository.Instance.GetUserData(userId);
-
+    
                 if (updatedUserData != null)
                 {
                     UserDataStore.CurrentUserData = updatedUserData;
@@ -145,19 +147,19 @@ public class QuestionScoreManager : MonoBehaviour
         catch (Exception ex)
         {
             Debug.LogError($"Erro ao atualizar score: {ex.Message}\n{ex.StackTrace}");
-
+    
             if (currentUserData != null && scoreChange != 0)
             {
-                int clientSideScore = currentUserData.Score + scoreChange;
-                int clientSideWeekScore = currentUserData.WeekScore + scoreChange;
-
+                int clientSideScore = Mathf.Max(0, currentUserData.Score + scoreChange);
+                int clientSideWeekScore = Mathf.Max(0, currentUserData.WeekScore + scoreChange);
+    
                 currentUserData.Score = clientSideScore;
                 currentUserData.WeekScore = clientSideWeekScore;
                 UserDataStore.CurrentUserData = currentUserData;
             }
         }
     }
-
+    
     private void OnEnable()
     {
         UserDataStore.OnUserDataChanged += OnUserDataChanged;
@@ -197,4 +199,14 @@ public class QuestionScoreManager : MonoBehaviour
 
         return baseScore;
     }
-}
+   
+    private int ClampScoreChange(int currentScore, int scoreChange)
+    {
+        int finalScore = currentScore + scoreChange;
+        if (finalScore < 0)
+            return -currentScore;
+
+        return scoreChange;
+    }
+   
+}   
