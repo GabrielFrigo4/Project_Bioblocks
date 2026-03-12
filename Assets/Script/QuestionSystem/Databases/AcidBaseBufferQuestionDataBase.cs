@@ -234,7 +234,7 @@ public class AcidBaseBufferQuestionDatabase : MonoBehaviour, IQuestionDatabase
                 "A força da base.",
                 "A força do ácido.",
                 "A velocidade de uma reação ácida.",
-                "O equilíbrio de uma reação básica."
+                "A velocidade de uma reação básica."
             },
             correctIndex = 1,
             questionNumber = 13,
@@ -252,7 +252,7 @@ public class AcidBaseBufferQuestionDatabase : MonoBehaviour, IQuestionDatabase
                 "A força da base.",
                 "A força do ácido.",
                 "A velocidade de uma reação ácida.",
-                "O equilíbrio de uma reação básica."
+                "A velocidade de uma reação básica."
             },
             correctIndex = 0,
             questionNumber = 14,
