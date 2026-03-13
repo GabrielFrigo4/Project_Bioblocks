@@ -193,74 +193,74 @@ public class AcidBaseBufferQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "AcidBaseBufferQuestionDatabase",
-            questionText = "Em uma reação em equilíbrio, se Keq > 1:",
+            questionText = "",
             answers = new string[] {
-                "Os reagentes são favorecidos.",
-                "Os produtos são favorecidos.",
-                "Os reagentes e produtos têm concentrações iguais.",
-                "A reação é irreversível."
+                "No equilíbrio, há mais reagentes do que produtos.",
+                "No equilíbrio, há mais produtos do que reagentes.",
+                "No equilíbrio, reagentes e produtos estão em quantidades iguais.",
+                "A reação ocorre apenas no sentido direto."  
             },
-            correctIndex = 1,
+            correctIndex = 0,
             questionNumber = 11,
             isImageAnswer = false,
-            isImageQuestion = false,
-            questionImagePath = "",
-            questionLevel = 2,
-            questionInDevelopment = false
+            isImageQuestion = true,
+            questionImagePath = "QuestionImages/AcidBaseDB/AcidBaseDB_ImageQuestionContainer11",
+            questionLevel = 1,
+            questionInDevelopment = true
         },
         new Question
         {
             questionDatabankName = "AcidBaseBufferQuestionDatabase",
-            questionText = "Em uma reação em equilíbrio, se Keq < 1:",
+            questionText = "",
             answers = new string[] {
-                "Os produtos são favorecidos.",
-                "Os reagentes são favorecidos.",
-                "Os reagentes e produtos têm concentrações iguais.",
-                "A reação é irreversível."
+                "No equilíbrio, há mais reagentes do que produtos.",
+                "No equilíbrio, há mais produtos do que reagentes.",
+                "No equilíbrio, reagentes e produtos estão em quantidades iguais.",
+                "A reação ocorre apenas no sentido direto."  
             },
             correctIndex = 1,
             questionNumber = 12,
             isImageAnswer = false,
-            isImageQuestion = false,
-            questionImagePath = "",
-            questionLevel = 2,
-            questionInDevelopment = false
+            isImageQuestion = true,
+            questionImagePath = "QuestionImages/AcidBaseDB/AcidBaseDB_ImageQuestionContainer12",
+            questionLevel = 1,
+            questionInDevelopment = true
         },
         new Question
         {
             questionDatabankName = "AcidBaseBufferQuestionDatabase",
-            questionText = "A constante de dissociação ácida (Ka) mede:",
+            questionText = "",
             answers = new string[] {
-                "A força de uma base.",
-                "A força de um ácido.",
-                "A velocidade de uma reação.",
-                "O equilíbrio de uma reação."
+                "A força da base.",
+                "A força do ácido.",
+                "A velocidade de uma reação ácida.",
+                "A velocidade de uma reação básica."
             },
             correctIndex = 1,
             questionNumber = 13,
             isImageAnswer = false,
-            isImageQuestion = false,
-            questionImagePath = "",
-            questionLevel = 2,
-            questionInDevelopment = false
+            isImageQuestion = true,
+            questionImagePath = "QuestionImages/AcidBaseDB/AcidBaseDB_ImageQuestionContainer13",
+            questionLevel = 1,
+            questionInDevelopment = true
         },
         new Question
         {
             questionDatabankName = "AcidBaseBufferQuestionDatabase",
-            questionText = "Um ácido forte tem um valor de Ka:",
+            questionText = "",
             answers = new string[] {
-                "Baixo",
-                "Alto",
-                "Próximo a 1",
-                "Próximo a 0"
+                "A força da base.",
+                "A força do ácido.",
+                "A velocidade de uma reação ácida.",
+                "A velocidade de uma reação básica."
             },
-            correctIndex = 1,
+            correctIndex = 0,
             questionNumber = 14,
             isImageAnswer = false,
-            isImageQuestion = false,
-            questionImagePath = "",
-            questionLevel = 2,
-            questionInDevelopment = false
+            isImageQuestion = true,
+            questionImagePath = "QuestionImages/AcidBaseDB/AcidBaseDB_ImageQuestionContainer14",
+            questionLevel = 1,
+            questionInDevelopment = true
         },
         new Question
         {

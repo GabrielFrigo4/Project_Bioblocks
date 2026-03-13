@@ -39,26 +39,18 @@ public class AuthenticationRepository : MonoBehaviour
 
         try
         {
-            var dependencyStatus = await Firebase.FirebaseApp.CheckAndFixDependenciesAsync();
-            if (dependencyStatus == Firebase.DependencyStatus.Available)
+            var app = Firebase.FirebaseApp.DefaultInstance;
+            if (app == null)
             {
-                var app = Firebase.FirebaseApp.DefaultInstance;
-                if (app == null)
-                {
-                    Debug.Log("Creating Firebase App");
-                    app = Firebase.FirebaseApp.Create();
-                }
-
-                auth = FirebaseAuth.DefaultInstance;
-                db = FirebaseFirestore.DefaultInstance;
-
-                isInitialized = true;
-                Debug.Log("Firebase Authentication initialized successfully");
+                Debug.Log("Creating Firebase App");
+                app = Firebase.FirebaseApp.Create();
             }
-            else
-            {
-                Debug.LogError($"Could not resolve all Firebase dependencies: {dependencyStatus}");
-            }
+
+            auth = FirebaseAuth.DefaultInstance;
+            db = FirebaseFirestore.DefaultInstance;
+
+            isInitialized = true;
+            Debug.Log("Firebase Authentication initialized successfully");
         }
         catch (Exception e)
         {

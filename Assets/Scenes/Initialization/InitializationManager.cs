@@ -158,8 +158,15 @@ public class InitializationManager : MonoBehaviour
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Debug.LogError($"[InitializationManager] INITIALIZATION FAILED: {ex.GetType().Name}: {ex.Message}");
+            Debug.LogError($"[InitializationManager] StackTrace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Debug.LogError($"[InitializationManager] InnerException: {ex.InnerException.Message}");
+            }
+
             try
             {
                 if (globalSpinner != null)
@@ -168,9 +175,9 @@ public class InitializationManager : MonoBehaviour
                 }
             }
             catch { }
-            
-            ShowError("Falha na inicialização. Por favor, verifique sua conexão e tente novamente.");
-        }
+
+            ShowError($"Falha na inicialização: {ex.Message}");
+        }  
     }
 
     private async Task InitializeFirebaseServices()
