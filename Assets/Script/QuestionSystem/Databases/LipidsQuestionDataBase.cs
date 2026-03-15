@@ -25,7 +25,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 2,
+            questionLevel = 1,
             questionInDevelopment = false
         },
         new Question
@@ -43,22 +43,22 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = true,
             questionImagePath = "QuestionImages/LipidDB/LipidsDB_ImageQuestionContainer2",
-            questionLevel = 2,
-            questionInDevelopment = true
+            questionLevel = 1,
+            questionInDevelopment = false
         },
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "O termo lipofílico se refere a:",
+            questionText = "Dentre as moléculas a seguir, selecione o lipídeo",
             answers = new string[] {
-                "Afinidade por água",
-                "Afinidade por lipídios",
-                "Afinidade por solventes polares",
-                "Afinidade por altas temperaturas"
+                "AnswerImages/LipidDB/colesterol",
+                "AnswerImages/AminoacidsDB/glutamina",
+                "AnswerImages/CarbohydrateDB/beta-galactopiranose",
+                "AnswerImages/CarbohydrateDB/D-galactose"
             },
-            correctIndex = 1,
+            correctIndex = 0,
             questionNumber = 3,
-            isImageAnswer = false,
+            isImageAnswer = true,
             isImageQuestion = false,
             questionImagePath = "",
             questionLevel = 1,
@@ -97,13 +97,13 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 2,
+            questionLevel = 1,
             questionInDevelopment = false
         },
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "Os lipídeos mais simples são:",
+            questionText = "",
             answers = new string[] {
                 "Triglicerídeos",
                 "Fosfolipídios",
@@ -113,9 +113,9 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             correctIndex = 2,
             questionNumber = 6,
             isImageAnswer = false,
-            isImageQuestion = false,
-            questionImagePath = "",
-            questionLevel = 2,
+            isImageQuestion = true,
+            questionImagePath = "QuestionImages/LipidDB/LipidsDB_ImageQuestionContainer6",
+            questionLevel = 1,
             questionInDevelopment = false
         },
         new Question
@@ -492,7 +492,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 27,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/LipidDB/lipids_question_27",
+            questionImagePath = "QuestionImages/LipidDB/LipidsDB_ImageQuestionContainer27",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -600,7 +600,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 33,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/LipidDB/lipids_question_33",
+            questionImagePath = "QuestionImages/LipidDB/LipidsDB_ImageQuestionContainer33",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -618,7 +618,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 34,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/LipidDB/lipids_question_34",
+            questionImagePath = "QuestionImages/LipidDB/LipidsDB_ImageQuestionContainer34",
             questionLevel = 2,
             questionInDevelopment = false
         },
@@ -636,9 +636,9 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 35,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/LipidDB/lipids_question_35",
+            questionImagePath = "QuestionImages/LipidDB/LipidsDB_ImageQuestionContainer35",
             questionLevel = 2,
-            questionInDevelopment = true
+            questionInDevelopment = false
         },
          new Question
         {
@@ -654,7 +654,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 36,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/LipidDB/lipids_question_36",
+            questionImagePath = "QuestionImages/LipidDB/LipidsDB_ImageQuestionContainer36",
             questionLevel = 2,
             questionInDevelopment = false
         },
