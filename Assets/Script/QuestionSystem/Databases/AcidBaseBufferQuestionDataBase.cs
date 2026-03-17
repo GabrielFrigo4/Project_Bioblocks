@@ -204,7 +204,7 @@ public class AcidBaseBufferQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 11,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/AcidBaseDB/AcidBaseDB_ImageQuestionContainer11",
+            questionImagePath = "QuestionImages/AcidBaseBufferDB/AcidBaseDB_ImageQuestionContainer11",
             questionLevel = 1,
             questionInDevelopment = false
         },
@@ -222,7 +222,7 @@ public class AcidBaseBufferQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 12,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/AcidBaseDB/AcidBaseDB_ImageQuestionContainer12",
+            questionImagePath = "QuestionImages/AcidBaseBufferDB/AcidBaseDB_ImageQuestionContainer12",
             questionLevel = 1,
             questionInDevelopment = false
         },
@@ -240,7 +240,7 @@ public class AcidBaseBufferQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 13,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/AcidBaseDB/AcidBaseDB_ImageQuestionContainer13",
+            questionImagePath = "QuestionImages/AcidBaseBufferDB/AcidBaseDB_ImageQuestionContainer13",
             questionLevel = 1,
             questionInDevelopment = false
         },
@@ -258,7 +258,7 @@ public class AcidBaseBufferQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionNumber = 14,
             isImageAnswer = false,
             isImageQuestion = true,
-            questionImagePath = "QuestionImages/AcidBaseDB/AcidBaseDB_ImageQuestionContainer14",
+            questionImagePath = "QuestionImages/AcidBaseBufferDB/AcidBaseDB_ImageQuestionContainer14",
             questionLevel = 1,
             questionInDevelopment = false
         },
