@@ -16,9 +16,9 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionText = "O que são lipídios?",
             answers = new string[] {
                 "Moléculas polares, que se associam através de interações eletrostáticas",
-                "Moléculas apolares, que se associam através de interações de hidrogênio",
-                "Moléculas apolares, que se associam através de interações de hidrofóbicas",
-                "Moléculas polares, que se associam através da hidratação"
+                "Moléculas apolares, que se associam através de interações hidrofóbicas",
+                "Moléculas anfipáticas, que se associam através de interações hidrofóbicas",
+                "Moléculas anfipáticas, que se associam através da pontes de hidrogênio"
             },
             correctIndex = 2,
             questionNumber = 1,
@@ -67,11 +67,11 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "O termo hidrofóbico se refere a:",
+            questionText = "O termo hidrofóbico refere-se a:",
             answers = new string[] {
                 "Repulsão por água",
                 "Afinidade por água",
-                "Afinidade por solventes orgânicos",
+                "Afinidade por solventes aquosos",
                 "Afinidade por altas temperaturas"
             },
             correctIndex = 0,
@@ -727,7 +727,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 2,
+            questionLevel = 1,
             questionInDevelopment = false
         },
         new Question
@@ -745,7 +745,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 2,
+            questionLevel = 1,
             questionInDevelopment = false
         },
         new Question
@@ -763,7 +763,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 2,
+            questionLevel = 1,
             questionInDevelopment = false
         },
         new Question
@@ -823,11 +823,11 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "Os lipídeos insolúveis em água são considerados:",
+            questionText = "As cadeias carbônicas dos ácidos graxos são caracterizadas como:",
             answers = new string[] {
-                "Hidrofílicos",
+                "Hidrofílicas",
                 "Hidrofóbicos",
-                "Anfipáticos",
+                "Anfipáticas",
                 "Polares"
             },
             correctIndex = 1,
@@ -853,7 +853,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 3,
             questionInDevelopment = false
         },
         new Question
@@ -871,7 +871,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 2,
             questionInDevelopment = false
         },
         new Question
@@ -907,7 +907,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 3,
             questionInDevelopment = false
         },
         new Question
@@ -915,12 +915,12 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionDatabankName = "LipidsQuestionDatabase",
             questionText = "Os ácidos graxos insaturados diferem dos saturados por:",
             answers = new string[] {
-                "Terem oxigênio extra",
-                "Colesterol",
-                "Ácido oleico",
-                "Não possuírem carbono"
+                "Possuírem ligações duplas na cadeia carbônica",
+                "Possuírem apenas ligações simples",
+                "Não apresentarem carbono",
+                "Serem sempre sólidos à temperatura ambiente"
             },
-            correctIndex = 1,
+            correctIndex = 0,
             questionNumber = 51,
             isImageAnswer = false,
             isImageQuestion = false,
@@ -931,12 +931,12 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "Os ácidos graxos insaturados diferem dos saturados por:",
+            questionText = "Os lipídeos são biomoléculas caracterizadas principalmente por:",
             answers = new string[] {
-                "Terem oxigênio extra",
-                "Colesterol",
-                "Ácido oleico",
-                "Não possuírem carbono"
+                "Alta solubilidade em água",
+                "Baixa solubilidade em água",
+                "Presença obrigatória de nitrogênio",
+                "Função exclusivamente energética"
             },
             correctIndex = 1,
             questionNumber = 52,
@@ -949,14 +949,14 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "Os ácidos graxos insaturados diferem dos saturados por:",
+            questionText = "Uma das principais funções dos lipídeos no organismo é:",
             answers = new string[] {
-                "Terem oxigênio extra",
-                "Colesterol",
-                "Estarem sempre sólidos à temperatura ambiente",
-                "Apresentarem ligações duplas na cadeia carbônica"
+                "Armazenamento de energia",
+                "Transmissão de impulsos nervosos exclusivamente",
+                "Formação de proteínas",
+                "Transporte de oxigênio no sangue"
             },
-            correctIndex = 3,
+            correctIndex = 0,
             questionNumber = 53,
             isImageAnswer = false,
             isImageQuestion = false,
@@ -1015,7 +1015,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 3,
             questionInDevelopment = false
         },
         new Question
@@ -1082,7 +1082,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
                 "São hormônios sexuais",
                 "Fornecem energia imediata"
             },
-            correctIndex = 1,
+            correctIndex = 2,
             questionNumber = 60,
             isImageAnswer = false,
             isImageQuestion = false,
@@ -1129,14 +1129,14 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "Os lipídeos são moléculas:",
+            questionText = "Os fosfolipídios que compõem a membrana celular possuem uma característica importante. Eles são:",
             answers = new string[] {
-                "Hidrossolúveis",
-                "Insolúveis em água e solúveis em solventes orgânicos",
-                "Sempre solúveis em água",
-                "Exclusivamente polares"
+                "Totalmente hidrofóbicos",
+                "Totalmente hidrofílicos",
+                "Anfipáticos",
+                "Apolares"
             },
-            correctIndex = 1,
+            correctIndex = 2,
             questionNumber = 63,
             isImageAnswer = false,
             isImageQuestion = false,
@@ -1144,24 +1144,24 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionLevel = 1,
             questionInDevelopment = false
         },
-        new Question
-        {
-            questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "Os lipídeos são moléculas:",
-            answers = new string[] {
-                "Hidrossolúveis",
-                "Insolúveis em água e solúveis em solventes orgânicos",
-                "Sempre solúveis em água",
-                "Exclusivamente polares"
-            },
-            correctIndex = 1,
-            questionNumber = 64,
-            isImageAnswer = false,
-            isImageQuestion = false,
-            questionImagePath = "",
-            questionLevel = 1,
-            questionInDevelopment = false
-        },
+       new Question
+       {
+           questionDatabankName = "LipidsQuestionDatabase",
+           questionText = "Em um fosfolipídio, a região hidrofílica corresponde:",
+           answers = new string[] {
+               "Às cadeias de ácidos graxos",
+               "Ao grupo fosfato",
+               "Ao glicerol apenas",
+               "Às ligações duplas"
+           },
+           correctIndex = 1,
+           questionNumber = 64,
+           isImageAnswer = false,
+           isImageQuestion = false,
+           questionImagePath = "",
+           questionLevel = 1,
+           questionInDevelopment = false
+       },
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
@@ -1177,7 +1177,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 3,
             questionInDevelopment = false
         },
         new Question
@@ -1195,25 +1195,25 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 2,
             questionInDevelopment = false
         },
         new Question
         {
             questionDatabankName = "LipidsQuestionDatabase",
-            questionText = "A manteiga é rica em ácidos graxos:",
+            questionText = "A manteiga é sólida à temperatura ambiente principalmente devido à predominância de:",
             answers = new string[] {
-                "Insaturados, geralmente líquidos à temperatura ambiente",
-                "Saturados, geralmente sólidos à temperatura ambiente",
-                "Aromáticos, voláteis",
-                "Fosforilados, presentes em membranas"
+                "Ácidos graxos insaturados",
+                "Ácidos graxos saturados",
+                "Fosfolipídios",
+                "Colesterol"
             },
             correctIndex = 1,
             questionNumber = 67,
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 2,
             questionInDevelopment = false
         },
         new Question
@@ -1231,7 +1231,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 2,
             questionInDevelopment = false
         },
         new Question
@@ -1285,7 +1285,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 2,
             questionInDevelopment = false
         },
         new Question
@@ -1357,7 +1357,7 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageAnswer = false,
             isImageQuestion = false,
             questionImagePath = "",
-            questionLevel = 1,
+            questionLevel = 2,
             questionInDevelopment = false
         },
         new Question
