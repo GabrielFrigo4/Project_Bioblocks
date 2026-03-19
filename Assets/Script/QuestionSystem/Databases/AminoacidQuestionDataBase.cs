@@ -170,7 +170,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             isImageQuestion = true,
             questionImagePath = "QuestionImages/AminoacidsDB/aminoacidDB_ImageQuestionContainer9",
             questionLevel = 2,
-            questionInDevelopment = false
+            questionInDevelopment = true
         },
         new Question
         {
@@ -560,7 +560,7 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
                 "4 aminoácidos",
                 "5 aminoácidos"
             },
-            correctIndex = 3,
+            correctIndex = 2,
             questionNumber = 31,
             isImageAnswer = false,
             isImageQuestion = true,
