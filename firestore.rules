@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /Users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.Score >= 0
+                   && request.resource.data.WeekScore >= 0
+                   && request.resource.data.UserId == resource.data.UserId
+                   && request.resource.data.Email == resource.data.Email;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
