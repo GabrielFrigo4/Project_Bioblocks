@@ -7,7 +7,6 @@ using Firebase.Storage;
 public class StorageRepository : MonoBehaviour
 {
     private static StorageRepository _instance;
-    private const string StorageBucket = "gs://microlearning-33132.firebasestorage.app";
     private bool isInitialized;
 
     public static StorageRepository Instance
@@ -54,7 +53,7 @@ public class StorageRepository : MonoBehaviour
             string userId = Firebase.Auth.FirebaseAuth.DefaultInstance.CurrentUser.UserId;
             string safePath = $"profile_images/{userId}/{Path.GetFileName(fileName)}";
 
-            var storageRef = storage.GetReferenceFromUrl(StorageBucket);
+            var storageRef = storage.RootReference;
             var imageRef = storageRef.Child(safePath);
 
             var metadata = new Firebase.Storage.MetadataChange
