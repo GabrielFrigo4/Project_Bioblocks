@@ -6,16 +6,20 @@ using System.Linq;
 
 public class RankingRepository : IRankingRepository
 {
+    private IAuthRepository _auth      => AppContext.Auth;
+    private IFirestoreRepository _firestore => AppContext.Firestore;
+
     public async Task<UserData> GetCurrentUserDataAsync()
     {
-        if (AuthenticationRepository.Instance.Auth.CurrentUser == null)
+        if (!AppContext.Auth.IsUserLoggedIn())
         {
             Debug.LogError("Usuário não está autenticado");
             return null;
         }
 
-        string userId = AuthenticationRepository.Instance.Auth.CurrentUser.UserId;
-        return await FirestoreRepository.Instance.GetUserData(userId);
+        string userId = AppContext.Auth.CurrentUserId;
+        return await AppContext.Firestore.GetUserData(userId);
+        
     }
 
     public async Task<List<Ranking>> GetRankingsAsync()
@@ -73,7 +77,7 @@ public class RankingRepository : IRankingRepository
     {
         try
         {
-            return await FirestoreRepository.Instance.GetAllUsersData();
+            return await AppContext.Firestore.GetAllUsersData();
         }
         catch (Exception e)
         {
@@ -86,7 +90,7 @@ public class RankingRepository : IRankingRepository
     {
         try
         {
-            await FirestoreRepository.Instance.UpdateUserWeekScore(userId, additionalScore);
+            await AppContext.Firestore.UpdateUserWeekScore(userId, additionalScore);
         }
         catch (Exception e)
         {
@@ -99,7 +103,7 @@ public class RankingRepository : IRankingRepository
     {
         try
         {
-            await FirestoreRepository.Instance.ResetAllWeeklyScores();
+            await AppContext.Firestore.ResetAllWeeklyScores();
         }
         catch (Exception e)
         {

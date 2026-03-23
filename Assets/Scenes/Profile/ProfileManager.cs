@@ -2,9 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Threading.Tasks;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using System.Collections;
 using UnityEngine.SceneManagement;
 
 public class ProfileManager : MonoBehaviour
@@ -19,8 +19,6 @@ public class ProfileManager : MonoBehaviour
     [SerializeField] private Button deleteAccountButton;
     [SerializeField] private TextMeshProUGUI deleteAccountButtonText;
     [SerializeField] private DeleteAccountPanel deleteAccountPanel;
-    private bool firestoreDeleted = false;
-    private bool storageDeleted = false;
 
     [Header("Configurações de Overlay")]
     [SerializeField] private GameObject deleteAccountDarkOverlay;
@@ -29,115 +27,63 @@ public class ProfileManager : MonoBehaviour
     [Header("ReAuthentication")]
     [SerializeField] private ReAuthenticationUI reAuthUI;
 
+    [Header("Navegação e UI Global")]
+    [SerializeField] private NavigationManager navigationManager;
+    [SerializeField] private LoadingSpinnerComponent loadingSpinner;
+
+    // -------------------------------------------------------
+    // Dependências — obtidas do AppContext no Start()
+    // -------------------------------------------------------
+    private IFirestoreRepository _firestore;
+    private IStorageRepository _storage;
+    private IAuthRepository _auth;
+    private IStatisticsProvider _statistics;
+
     private UserData currentUserData;
+    private bool firestoreDeleted = false;
+    private bool storageDeleted = false;
+
+    // -------------------------------------------------------
+    // Ciclo de vida
+    // -------------------------------------------------------
 
     private void Start()
     {
-        if (deleteAccountPanel == null)
-        {
-            Debug.LogError("DeleteAccountPanel não está atribuído no ProfileManager!");
-        }
-        else
-        {
-            Debug.Log("DeleteAccountPanel encontrado no ProfileManager");
-        }
-        if (deleteAccountDarkOverlay != null)
-        {
-            deleteAccountDarkOverlay.SetActive(false);
-        }
+        _firestore  = AppContext.Firestore;
+        _storage    = AppContext.Storage;
+        _auth       = AppContext.Auth;
+        _statistics = AppContext.Statistics;
 
-        // Configurar o HalfView para esta cena
+        if (deleteAccountPanel == null)
+            Debug.LogError("DeleteAccountPanel não está atribuído no ProfileManager!");
+
+        if (deleteAccountDarkOverlay != null)
+            deleteAccountDarkOverlay.SetActive(false);
+
         HalfViewComponent halfView = HalfViewRegistry.GetHalfViewForScene(SceneManager.GetActiveScene().name);
         if (halfView != null)
         {
             halfView.Configure(
-            "Opções da Conta",
-            "Escolha uma das opções abaixo:",
-            "Sair da Conta",
-            () => LogoutButton(),
-            "Deletar Conta",
-            () =>
-            {
-                // Esconder a HalfView primeiro
-                halfView.HideMenu();
-
-                // Pequeno delay para garantir que a HalfView está escondida antes de mostrar o painel de deleção
-                StartCoroutine(DelayedStartDeleteAccount());
-            }
+                "Opções da Conta",
+                "Escolha uma das opções abaixo:",
+                "Sair da Conta",
+                () => LogoutButton(),
+                "Deletar Conta",
+                () =>
+                {
+                    halfView.HideMenu();
+                    StartCoroutine(DelayedStartDeleteAccount());
+                }
             );
         }
 
         InitializeAccountManager();
     }
 
-    private IEnumerator DelayedStartDeleteAccount()
+    private void OnEnable()
     {
-        yield return new WaitForSeconds(0.1f);
-        StartDeleteAccount();
-    }
-
-    private void InitializeAccountManager()
-    {
-        currentUserData = UserDataStore.CurrentUserData;
-        Debug.Log($"CurrentUserData: {(currentUserData != null ? "Loaded" : "Null")}");
-
-        if (currentUserData != null)
-        {
-            UpdateUI();
-
-            FirestoreRepository.Instance.ListenToUserData(
-                currentUserData.UserId,
-                null,
-                (answeredQuestions) =>
-                {
-                    Debug.Log("ProfileManager: Recebeu atualização de questões respondidas via listener");
-
-                    if (DatabaseStatisticsManager.Instance.IsInitialized)
-                    {
-                        DisplayAnsweredQuestionsCount();
-                    }
-                }
-            );
-
-            if (DatabaseStatisticsManager.Instance.IsInitialized)
-            {
-                DisplayAnsweredQuestionsCount();
-            }
-            else
-            {
-                DatabaseStatisticsManager.OnStatisticsReady += OnDatabaseStatisticsReady;
-                StartCoroutine(InitializeDatabaseStatistics());
-            }
-        }
-        else
-        {
-            Debug.LogError("User data not loaded. Redirecting to Login.");
-        }
-    }
-
-    private IEnumerator InitializeDatabaseStatistics()
-    {
-        yield return null;
-
-        Debug.Log("ProfileManager iniciando inicialização das estatísticas");
-        var task = DatabaseStatisticsManager.Instance.Initialize();
-
-        while (!task.IsCompleted)
-        {
-            yield return null;
-        }
-
-        if (task.IsFaulted)
-        {
-            Debug.LogError($"Erro ao inicializar estatísticas: {task.Exception}");
-        }
-    }
-
-    private void OnDatabaseStatisticsReady()
-    {
-        Debug.Log("ProfileManager: Estatísticas prontas, exibindo contagem de questões");
-        DisplayAnsweredQuestionsCount();
-        DatabaseStatisticsManager.OnStatisticsReady -= OnDatabaseStatisticsReady;
+        UserDataStore.OnUserDataChanged += OnUserDataChanged;
+        AnsweredQuestionsManager.OnAnsweredQuestionsUpdated += HandleAnsweredQuestionsUpdated;
     }
 
     private void OnDisable()
@@ -146,7 +92,6 @@ public class ProfileManager : MonoBehaviour
         AnsweredQuestionsManager.OnAnsweredQuestionsUpdated -= HandleAnsweredQuestionsUpdated;
         DatabaseStatisticsManager.OnStatisticsReady -= OnDatabaseStatisticsReady;
 
-        // Tentar encontrar DarkOverlay apenas se o objeto ainda existe
         if (this != null && gameObject != null && gameObject.scene.isLoaded)
         {
             GameObject darkOverlay = GameObject.Find("DarkOverlay");
@@ -157,6 +102,67 @@ public class ProfileManager : MonoBehaviour
             }
         }
     }
+
+    // -------------------------------------------------------
+    // Inicialização
+    // -------------------------------------------------------
+
+    private void InitializeAccountManager()
+    {
+        currentUserData = UserDataStore.CurrentUserData;
+        Debug.Log($"CurrentUserData: {(currentUserData != null ? "Loaded" : "Null")}");
+
+        if (currentUserData == null)
+        {
+            Debug.LogError("User data not loaded. Redirecting to Login.");
+            return;
+        }
+
+        UpdateUI();
+
+        _firestore.ListenToUserData(
+            currentUserData.UserId,
+            onScoreChanged: null,
+            onWeekScoreChanged: null,
+            onAnsweredQuestionsChanged: answeredQuestions =>
+            {
+                Debug.Log("ProfileManager: Recebeu atualização de questões respondidas via listener");
+                if (_statistics.IsInitialized)
+                    DisplayAnsweredQuestionsCount();
+            }
+        );
+
+        if (_statistics.IsInitialized)
+        {
+            DisplayAnsweredQuestionsCount();
+        }
+        else
+        {
+            DatabaseStatisticsManager.OnStatisticsReady += OnDatabaseStatisticsReady;
+            StartCoroutine(InitializeDatabaseStatistics());
+        }
+    }
+
+    private IEnumerator InitializeDatabaseStatistics()
+    {
+        yield return null;
+        var task = (_statistics as DatabaseStatisticsManager)?.Initialize();
+        if (task == null) yield break;
+        while (!task.IsCompleted) yield return null;
+        if (task.IsFaulted)
+            Debug.LogError($"Erro ao inicializar estatísticas: {task.Exception}");
+    }
+
+    private void OnDatabaseStatisticsReady()
+    {
+        Debug.Log("ProfileManager: Estatísticas prontas");
+        DisplayAnsweredQuestionsCount();
+        DatabaseStatisticsManager.OnStatisticsReady -= OnDatabaseStatisticsReady;
+    }
+
+    // -------------------------------------------------------
+    // UI
+    // -------------------------------------------------------
 
     private void OnUserDataChanged(UserData userData)
     {
@@ -177,11 +183,78 @@ public class ProfileManager : MonoBehaviour
         createdTimeText.text = $"Conta criada em {currentUserData.GetFormattedCreatedTime()}";
     }
 
+    private void HandleAnsweredQuestionsUpdated(Dictionary<string, int> answeredCounts)
+    {
+        if (this == null) return;
+        Debug.Log("ProfileManager: Recebeu atualização do AnsweredQuestionsManager");
+        DisplayAnsweredQuestionsCount();
+    }
+
+    private void DisplayAnsweredQuestionsCount()
+    {
+        if (currentUserData == null || string.IsNullOrEmpty(currentUserData.UserId))
+        {
+            Debug.LogError("Usuário não encontrado ou ID inválido");
+            return;
+        }
+
+        var userAnsweredQuestions = AnsweredQuestionsListStore.GetAnsweredQuestionsCountForUser(currentUserData.UserId);
+
+        string[] allDatabases =
+        {
+            "AcidBaseBufferQuestionDatabase",
+            "AminoacidQuestionDatabase",
+            "BiochemistryIntroductionQuestionDatabase",
+            "CarbohydratesQuestionDatabase",
+            "EnzymeQuestionDatabase",
+            "LipidsQuestionDatabase",
+            "MembranesQuestionDatabase",
+            "NucleicAcidsQuestionDatabase",
+            "ProteinQuestionDatabase",
+            "WaterQuestionDatabase"
+        };
+
+        foreach (string databankName in allDatabases)
+        {
+            int answeredCount = userAnsweredQuestions.ContainsKey(databankName) ? userAnsweredQuestions[databankName] : 0;
+            int totalQuestions = QuestionBankStatistics.GetTotalQuestions(databankName);
+            if (totalQuestions <= 0) totalQuestions = 50;
+
+            string objectName = $"{databankName}CountText";
+            GameObject textObject = GameObject.Find(objectName);
+            if (textObject == null)
+            {
+                Debug.LogWarning($"Não foi possível encontrar o GameObject: {objectName}");
+                continue;
+            }
+
+            TextMeshProUGUI tmpText = textObject.GetComponent<TextMeshProUGUI>();
+            if (tmpText == null)
+            {
+                Debug.LogWarning($"TextMeshProUGUI não encontrado em: {objectName}");
+                continue;
+            }
+
+            tmpText.text = $"{answeredCount}/{totalQuestions}";
+        }
+    }
+
+    // -------------------------------------------------------
+    // Navegação
+    // -------------------------------------------------------
+
     public void Navigate(string sceneName)
     {
         Debug.Log($"Navigating to {sceneName}");
-        NavigationManager.Instance.NavigateTo(sceneName);
+        if (navigationManager != null)
+            navigationManager.NavigateTo(sceneName);
+        else
+            Debug.LogError("[ProfileManager] NavigationManager não configurado no Inspector.");
     }
+
+    // -------------------------------------------------------
+    // Logout
+    // -------------------------------------------------------
 
     public void LogoutButton()
     {
@@ -194,22 +267,33 @@ public class ProfileManager : MonoBehaviour
         {
             string currentUserId = UserDataStore.CurrentUserData?.UserId;
             UserDataStore.CurrentUserData = null;
-            AnsweredQuestionsManager.Instance.ResetManager();
-            if (!string.IsNullOrEmpty(currentUserId))
-            {
-                AnsweredQuestionsListStore.ClearUserAnsweredQuestions(currentUserId);
-            }
 
-            await AuthenticationRepository.Instance.LogoutAsync();
+            // TODO: AnsweredQuestionsManager será refatorado em etapa futura
+            AnsweredQuestionsManager.Instance.ResetManager();
+
+            if (!string.IsNullOrEmpty(currentUserId))
+                AnsweredQuestionsListStore.ClearUserAnsweredQuestions(currentUserId);
+
+            await _auth.LogoutAsync();
             Debug.Log("Logout realizado com sucesso");
 
             Navigate("LoginView");
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Debug.LogError($"Erro ao realizar logout: {ex.Message}");
             throw;
         }
+    }
+
+    // -------------------------------------------------------
+    // Delete Account
+    // -------------------------------------------------------
+
+    private IEnumerator DelayedStartDeleteAccount()
+    {
+        yield return new WaitForSeconds(0.1f);
+        StartDeleteAccount();
     }
 
     public void StartDeleteAccount()
@@ -222,36 +306,19 @@ public class ProfileManager : MonoBehaviour
             return;
         }
 
-        bool overlayWasActive = false;
         if (deleteAccountDarkOverlay != null)
         {
-            overlayWasActive = deleteAccountDarkOverlay.activeSelf;
-
-            if (!overlayWasActive)
-            {
+            if (!deleteAccountDarkOverlay.activeSelf)
                 deleteAccountDarkOverlay.SetActive(true);
-                Debug.Log("DarkOverlay ativado para confirmação de exclusão");
-            }
-            else
-            {
-                Debug.Log("DarkOverlay já estava ativo, mantendo-o");
-            }
 
             Canvas overlayCanvas = deleteAccountDarkOverlay.GetComponent<Canvas>();
-            if (overlayCanvas != null)
-            {
-                overlayCanvas.overrideSorting = true;
-                overlayCanvas.sortingOrder = 109;
-                Debug.Log($"Configurado sortingOrder do overlay para {overlayCanvas.sortingOrder}");
-            }
-            else
+            if (overlayCanvas == null)
             {
                 overlayCanvas = deleteAccountDarkOverlay.AddComponent<Canvas>();
-                overlayCanvas.overrideSorting = true;
-                overlayCanvas.sortingOrder = 109;
                 deleteAccountDarkOverlay.AddComponent<GraphicRaycaster>();
-                Debug.Log("Canvas adicionado ao DeleteAccountDarkOverlay");
             }
+            overlayCanvas.overrideSorting = true;
+            overlayCanvas.sortingOrder = 109;
 
             Image overlayImage = deleteAccountDarkOverlay.GetComponent<Image>();
             if (overlayImage != null)
@@ -266,65 +333,31 @@ public class ProfileManager : MonoBehaviour
             Debug.LogError("DeleteAccountDarkOverlay é null!");
         }
 
-        // Esconder os detalhes do usuário
         userDataTable.alpha = 0;
         userDataTable.interactable = false;
         userDataTable.blocksRaycasts = false;
 
-        // Esconder qualquer HalfViewComponent ativo
         HalfViewRegistry.HideHalfViewForCurrentScene();
-
-        // Mostrar o painel de confirmação
         deleteAccountPanel.ShowPanel();
         Debug.Log("DeleteAccountPanel exibido com sucesso");
     }
 
     public void CancelDeleteAccount()
     {
-        Debug.Log("CancelDeleteAccount chamado");
-        if (deleteAccountPanel == null)
-        {
-            Debug.LogError("DeleteAccountPanel é null!");
-            return;
-        }
+        if (deleteAccountPanel == null) return;
 
         if (deleteAccountDarkOverlay != null)
-        {
             deleteAccountDarkOverlay.SetActive(false);
-        }
 
         GameObject halfViewOverlay = GameObject.Find("HalfViewDarkOverlay");
         if (halfViewOverlay != null)
-        {
             halfViewOverlay.SetActive(false);
-        }
 
         ReenableSceneInteractions();
         userDataTable.alpha = 1;
         userDataTable.interactable = true;
         userDataTable.blocksRaycasts = true;
         deleteAccountPanel.HidePanel();
-    }
-
-    private void ReenableSceneInteractions()
-    {
-        Selectable[] selectables = FindObjectsByType<Selectable>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID);
-
-        foreach (Selectable selectable in selectables)
-        {
-            if (!ShouldStayDisabled(selectable.gameObject))
-            {
-                selectable.interactable = true;
-            }
-        }
-
-        Debug.Log("Todas as interações da cena reabilitadas");
-    }
-
-    private bool ShouldStayDisabled(GameObject obj)
-    {
-        // Adicionar lógica para elementos que devem permanecer desativados
-        return false;
     }
 
     public void DeleteAccountButton()
@@ -335,6 +368,7 @@ public class ProfileManager : MonoBehaviour
     public async Task DeleteAccountAsync(bool isRetry = false)
     {
         Debug.Log($"Starting DeleteAccountAsync... (isRetry: {isRetry})");
+
         if (currentUserData.UserId == null)
         {
             Debug.LogError("The user is not connected.");
@@ -353,10 +387,9 @@ public class ProfileManager : MonoBehaviour
                 // 1. Deletar documento do Firestore
                 if (!firestoreDeleted)
                 {
-                    Debug.Log("Iniciando deleção do documento do Firestore...");
                     try
                     {
-                        await DeleteUserDocumentAsync(userId);
+                        await _firestore.DeleteDocument("Users", userId);
                         Debug.Log("Documento do Firestore deletado com sucesso");
                         firestoreDeleted = true;
                     }
@@ -369,10 +402,9 @@ public class ProfileManager : MonoBehaviour
                 // 2. Deletar imagem do Storage
                 if (!storageDeleted && !string.IsNullOrEmpty(currentUserData.ProfileImageUrl))
                 {
-                    Debug.Log("Deletando imagem do Storage...");
                     try
                     {
-                        await StorageRepository.Instance.DeleteProfileImageAsync(currentUserData.ProfileImageUrl);
+                        await _storage.DeleteProfileImageAsync(currentUserData.ProfileImageUrl);
                         Debug.Log("Imagem do Storage deletada com sucesso");
                         storageDeleted = true;
                     }
@@ -383,103 +415,31 @@ public class ProfileManager : MonoBehaviour
                 }
             }
 
-            // 3. Tentar deletar o usuário do Authentication
-            Debug.Log("Deletando usuário do Authentication...");
+            // 3. Deletar usuário do Authentication
             try
             {
-                await AuthenticationRepository.Instance.DeleteUser(userId);
+                await _auth.DeleteUser(userId);
                 Debug.Log("Usuário deletado do Authentication com sucesso");
 
-                // Sucesso total
                 if (deleteAccountButtonText != null) deleteAccountButtonText.text = "Até a próxima!";
                 deleteAccountPanel.HidePanel();
 
-                // Desativar overlays
-                if (deleteAccountDarkOverlay != null)
-                {
-                    Canvas overlayCanvas = deleteAccountDarkOverlay.GetComponent<Canvas>();
-                    if (overlayCanvas != null)
-                    {
-                        Destroy(overlayCanvas);
-                        Debug.Log("✓ Canvas do DeleteAccountDarkOverlay destruído");
-                    }
-
-                    deleteAccountDarkOverlay.SetActive(false);
-                    Debug.Log("✓ DeleteAccountDarkOverlay desativado");
-                }
-
-                GameObject halfViewOverlay = GameObject.Find("HalfViewDarkOverlay");
-                if (halfViewOverlay != null)
-                {
-                    halfViewOverlay.SetActive(false);
-                }
-
-                // Procura e desabilita canvas e overlays por nome
-                string[] overlayNames = new string[] {
-                    "DarkOverlay",
-                    "DeleteAccountDarkOverlay",
-                    "HalfViewDarkOverlay",
-                    "Overlay",
-                    "BlockerPanel"
-                };
-
-                foreach (string overlayName in overlayNames)
-                {
-                    GameObject overlay = GameObject.Find(overlayName);
-                    if (overlay != null && overlay.activeSelf)
-                    {
-                        Debug.LogWarning($"Overlay ativo encontrado: {overlayName}");
-                        Canvas canvas = overlay.GetComponent<Canvas>();
-                        if (canvas != null)
-                        {
-                            canvas.enabled = false;
-                            Debug.Log($"canvas de {overlayName} desabilitado");
-                        }
-
-                        overlay.SetActive(false);
-                        Debug.Log($"{overlayName} desativado");
-                    }
-                }
-
-                Canvas[] allCanvases = FindObjectsOfType<Canvas>(true);
-                foreach (Canvas canvas in allCanvases)
-                {
-                    if (canvas.sortingOrder >= 100 && canvas.gameObject.name.Contains("Dark"))
-                    {
-                        Debug.LogWarning($"⚠️ Canvas suspeito encontrado: {canvas.gameObject.name} (sortingOrder: {canvas.sortingOrder})");
-                        canvas.gameObject.SetActive(false);
-                        Debug.Log($"  └─> Desativado");
-                    }
-                }
-
+                CleanupOverlays();
                 ReenableSceneInteractions();
 
-                // Limpa UserDataStore
                 UserDataStore.CurrentUserData = null;
-                Debug.Log("✓ UserDataStore limpo");
 
-                // Limpa AnsweredQuestionsManager
                 if (AnsweredQuestionsManager.Instance != null)
                 {
                     AnsweredQuestionsManager.Instance.ResetManager();
                     Debug.Log("✓ AnsweredQuestionsManager resetado");
                 }
 
-                // ⭐ Limpa TODOS os dados do AnsweredQuestionsListStore
                 AnsweredQuestionsListStore.ClearAll();
-                Debug.Log("✓ AnsweredQuestionsListStore completamente limpo");
-
-                // ⭐ Força reinicialização da BottomBar se existir
-                if (NavigationBottomBarManager.Instance != null)
-                {
-                    Debug.Log("✓ Preparando BottomBar para próximo usuário");
-                }
-
                 Debug.Log("=== LIMPEZA COMPLETA FINALIZADA ===");
 
                 await Task.Delay(300);
-
-                LoadingSpinnerComponent.Instance.ShowSpinnerUntilSceneLoaded("LoginView");
+                loadingSpinner?.ShowSpinnerUntilSceneLoaded("LoginView");
                 Navigate("LoginView");
             }
             catch (ReauthenticationRequiredException)
@@ -493,35 +453,23 @@ public class ProfileManager : MonoBehaviour
                 }
 
                 deleteAccountPanel.HidePanel();
+
                 if (reAuthUI != null)
                 {
-                    Canvas reAuthCanvas = reAuthUI.GetComponent<Canvas>();
-                    if (reAuthCanvas == null)
-                    {
-                        reAuthCanvas = reAuthUI.gameObject.AddComponent<Canvas>();
-                    }
-
+                    Canvas reAuthCanvas = reAuthUI.GetComponent<Canvas>() ?? reAuthUI.gameObject.AddComponent<Canvas>();
                     reAuthCanvas.overrideSorting = true;
                     reAuthCanvas.sortingOrder = 200;
 
-                    GraphicRaycaster raycaster = reAuthUI.GetComponent<GraphicRaycaster>();
-                    if (raycaster == null)
-                    {
+                    if (reAuthUI.GetComponent<GraphicRaycaster>() == null)
                         reAuthUI.gameObject.AddComponent<GraphicRaycaster>();
-                    }
-
-                    Debug.Log($"ReAuthUI Canvas configurado com sortingOrder {reAuthCanvas.sortingOrder}");
                 }
 
-                Debug.Log($"Mostrando painel de reautenticação para email: {currentUserData.Email}");
                 reAuthUI.ShowReAuthPanel(currentUserData.Email, async () =>
                 {
                     Debug.Log("Reautenticação bem-sucedida, tentando deletar apenas Authentication...");
                     await DeleteAccountAsync(true);
                 });
-                return;
             }
-
         }
         catch (Exception ex)
         {
@@ -531,89 +479,56 @@ public class ProfileManager : MonoBehaviour
                 deleteAccountButton.interactable = true;
                 deleteAccountButtonText.text = "Novamente";
             }
-
-            LoadingSpinnerComponent.Instance.HideSpinner();
+            loadingSpinner?.HideSpinner();
         }
     }
 
-    private async Task DeleteUserDocumentAsync(string userId)
+    // -------------------------------------------------------
+    // Helpers privados
+    // -------------------------------------------------------
+
+    private void CleanupOverlays()
     {
-        try
+        if (deleteAccountDarkOverlay != null)
         {
-            await FirestoreRepository.Instance.DeleteDocument("Users", userId);
-            Debug.Log($"Documento do usuário {userId} deletado com sucesso");
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Erro ao deletar documento do usuário {userId}: {ex.Message}");
-            throw;
-        }
-    }
-
-    private void DisplayAnsweredQuestionsCount()
-    {
-        if (currentUserData == null || string.IsNullOrEmpty(currentUserData.UserId))
-        {
-            Debug.LogError("Usuário não encontrado ou ID inválido");
-            return;
+            Canvas overlayCanvas = deleteAccountDarkOverlay.GetComponent<Canvas>();
+            if (overlayCanvas != null) Destroy(overlayCanvas);
+            deleteAccountDarkOverlay.SetActive(false);
         }
 
-        var userAnsweredQuestions = AnsweredQuestionsListStore.GetAnsweredQuestionsCountForUser(currentUserData.UserId);
+        GameObject halfViewOverlay = GameObject.Find("HalfViewDarkOverlay");
+        if (halfViewOverlay != null) halfViewOverlay.SetActive(false);
 
-        string[] allDatabases = new string[]
+        string[] overlayNames = { "DarkOverlay", "DeleteAccountDarkOverlay", "HalfViewDarkOverlay", "Overlay", "BlockerPanel" };
+        foreach (string overlayName in overlayNames)
         {
-        "AcidBaseBufferQuestionDatabase",
-        "AminoacidQuestionDatabase",
-        "BiochemistryIntroductionQuestionDatabase",
-        "CarbohydratesQuestionDatabase",
-        "EnzymeQuestionDatabase",
-        "LipidsQuestionDatabase",
-        "MembranesQuestionDatabase",
-        "NucleicAcidsQuestionDatabase",
-        "ProteinQuestionDatabase",
-        "WaterQuestionDatabase"
-        };
-
-        foreach (string databankName in allDatabases)
-        {
-            int answeredCount = userAnsweredQuestions.ContainsKey(databankName) ? userAnsweredQuestions[databankName] : 0;
-            int totalQuestions = QuestionBankStatistics.GetTotalQuestions(databankName);
-            if (totalQuestions <= 0) totalQuestions = 50; // Valor padrão se não houver estatísticas
-
-            string objectName = $"{databankName}CountText";
-            GameObject textObject = GameObject.Find(objectName);
-
-            if (textObject == null)
+            GameObject overlay = GameObject.Find(overlayName);
+            if (overlay != null && overlay.activeSelf)
             {
-                Debug.LogWarning($"Não foi possível encontrar o GameObject: {objectName}");
-                continue;
+                Canvas canvas = overlay.GetComponent<Canvas>();
+                if (canvas != null) canvas.enabled = false;
+                overlay.SetActive(false);
             }
+        }
 
-            TextMeshProUGUI tmpText = textObject.GetComponent<TextMeshProUGUI>();
-            if (tmpText == null)
-            {
-                Debug.LogWarning($"Componente TextMeshProUGUI não encontrado no GameObject: {objectName}");
-                continue;
-            }
-
-            tmpText.text = $"{answeredCount}/{totalQuestions}";
-            Debug.Log($"Usuário {currentUserData.UserId} - Banco de Dados: {databankName}, Questões Respondidas: {answeredCount}/{totalQuestions}");
+        Canvas[] allCanvases = FindObjectsOfType<Canvas>(true);
+        foreach (Canvas canvas in allCanvases)
+        {
+            if (canvas.sortingOrder >= 100 && canvas.gameObject.name.Contains("Dark"))
+                canvas.gameObject.SetActive(false);
         }
     }
 
-    private void OnEnable()
+    private void ReenableSceneInteractions()
     {
-        UserDataStore.OnUserDataChanged += OnUserDataChanged;
-        AnsweredQuestionsManager.OnAnsweredQuestionsUpdated += HandleAnsweredQuestionsUpdated;
+        Selectable[] selectables = FindObjectsByType<Selectable>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID);
+        foreach (Selectable selectable in selectables)
+        {
+            if (!ShouldStayDisabled(selectable.gameObject))
+                selectable.interactable = true;
+        }
+        Debug.Log("Todas as interações da cena reabilitadas");
     }
 
-    private void HandleAnsweredQuestionsUpdated(Dictionary<string, int> answeredCounts)
-    {
-        if (this == null) return;
-
-        Debug.Log("ProfileManager: Recebeu atualização do AnsweredQuestionsManager");
-
-        DisplayAnsweredQuestionsCount();
-    }
-
+    private bool ShouldStayDisabled(GameObject obj) => false;
 }

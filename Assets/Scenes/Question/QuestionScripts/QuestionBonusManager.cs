@@ -26,10 +26,12 @@ public class QuestionBonusManager : MonoBehaviour
     private bool isBonusActive = false;
     private float currentBonusTime = 0f;
     private QuestionSceneBonusManager bonusManager;
+    private UserHeaderManager _userHeaderManager;
 
     private void Start()
     {
         bonusManager = new QuestionSceneBonusManager();
+        _userHeaderManager = FindFirstObjectByType<UserHeaderManager>();
 
         if (!ValidateComponents())
         {
@@ -59,9 +61,9 @@ public class QuestionBonusManager : MonoBehaviour
         }
 
         // Inscreve-se no evento do UserTopBarManager se existir
-        if (UserHeaderManager.Instance != null)
+        if (_userHeaderManager != null)
         {
-            UserHeaderManager.Instance.OnBonusMultiplierUpdated += OnBonusMultiplierUpdated;
+            _userHeaderManager.OnBonusMultiplierUpdated += OnBonusMultiplierUpdated;
             Debug.Log("QuestionBonusManager: Inscrito no UserTopBarManager");
         }
         else
@@ -166,9 +168,9 @@ public class QuestionBonusManager : MonoBehaviour
                         isBonusActive = true;
                         
                         // Atualiza o UserTopBarManager se existir
-                        if (UserHeaderManager.Instance != null)
+                        if (_userHeaderManager != null)
                         {
-                            UserHeaderManager.Instance.RefreshActiveBonuses();
+                            _userHeaderManager.RefreshActiveBonuses();
                         }
                     }
                     else
@@ -240,9 +242,9 @@ public class QuestionBonusManager : MonoBehaviour
             }
 
             // Notifica o UserTopBarManager para atualizar o timer na TopBar
-            if (UserHeaderManager.Instance != null)
+            if (_userHeaderManager != null)
             {
-                UserHeaderManager.Instance.RefreshActiveBonuses();
+                _userHeaderManager.RefreshActiveBonuses();
                 Debug.Log("QuestionBonusManager: UserTopBarManager notificado sobre novo bônus");
             }
             else
@@ -285,9 +287,9 @@ public class QuestionBonusManager : MonoBehaviour
         }
 
         // Desinscreve-se do evento do UserTopBarManager
-        if (UserHeaderManager.Instance != null)
+        if (_userHeaderManager != null)
         {
-            UserHeaderManager.Instance.OnBonusMultiplierUpdated -= OnBonusMultiplierUpdated;
+            _userHeaderManager.OnBonusMultiplierUpdated -= OnBonusMultiplierUpdated;
         }
     }
 
@@ -314,7 +316,7 @@ public class QuestionBonusManager : MonoBehaviour
     public bool IsBonusActive()
     {
         // Verifica tanto no estado local quanto no UserTopBarManager
-        if (UserHeaderManager.Instance != null && UserHeaderManager.Instance.IsAnyBonusActive())
+        if (_userHeaderManager != null && _userHeaderManager.IsAnyBonusActive())
         {
             return true;
         }
@@ -325,9 +327,9 @@ public class QuestionBonusManager : MonoBehaviour
     public int GetCurrentScoreMultiplier()
     {
         // Prioriza o multiplicador do UserTopBarManager (fonte da verdade)
-        if (UserHeaderManager.Instance != null)
+        if (_userHeaderManager != null)
         {
-            return UserHeaderManager.Instance.GetTotalMultiplier();
+            return _userHeaderManager.GetTotalMultiplier();
         }
         
         return isBonusActive ? combinedMultiplier : 1;
@@ -336,9 +338,9 @@ public class QuestionBonusManager : MonoBehaviour
     public int ApplyBonusToScore(int baseScore)
     {
         // Usa o UserTopBarManager para aplicar o bônus (fonte da verdade)
-        if (UserHeaderManager.Instance != null)
+        if (_userHeaderManager != null)
         {
-            return UserHeaderManager.Instance.ApplyTotalBonus(baseScore);
+            return _userHeaderManager.ApplyTotalBonus(baseScore);
         }
 
         // Fallback para lógica local caso UserTopBarManager não exista

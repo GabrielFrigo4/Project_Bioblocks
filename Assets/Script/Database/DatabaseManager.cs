@@ -3,46 +3,49 @@ using SQLite4Unity3d;
 using System;
 using System.IO;
 
-public class DatabaseManager : MonoBehaviour
+public class DatabaseManager : MonoBehaviour, IDatabaseManager
 {
-    private static DatabaseManager _instance;
-    public static DatabaseManager Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                GameObject go = new GameObject("DatabaseManager");
-                _instance = go.AddComponent<DatabaseManager>();
-                DontDestroyOnLoad(go);
-            }
-            return _instance;
-        }
-    }
-
     private SQLiteConnection _connection;
     private readonly object _lock = new object();
     private bool _isInitialized = false;
 
+    public bool IsInitialized => _isInitialized;
+
+    // -------------------------------------------------------
+    // Ciclo de vida
+    // -------------------------------------------------------
+
     private void Awake()
     {
-        if (_instance != null && _instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        _instance = this;
         DontDestroyOnLoad(gameObject);
-        InitializeDatabase();
+        Initialize();
     }
 
-    private void InitializeDatabase()
+    private void OnApplicationQuit()
     {
+        CloseConnection();
+    }
+
+    private void OnDestroy()
+    {
+        CloseConnection();
+    }
+
+    // -------------------------------------------------------
+    // Inicialização
+    // -------------------------------------------------------
+
+    public void Initialize()
+    {
+        if (_isInitialized) return;
+
         try
         {
             DatabaseConfig.EnsureDatabaseDirectory();
-            _connection = new SQLiteConnection(DatabaseConfig.DatabasePath, SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create);
+            _connection = new SQLiteConnection(
+                DatabaseConfig.DatabasePath,
+                SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create
+            );
             CreateTables();
             _isInitialized = true;
             Debug.Log($"[DatabaseManager] Database initialized at: {DatabaseConfig.DatabasePath}");
@@ -66,12 +69,14 @@ public class DatabaseManager : MonoBehaviour
         }
     }
 
+    // -------------------------------------------------------
+    // IDatabaseManager
+    // -------------------------------------------------------
+
     public SQLiteConnection GetConnection()
     {
         if (_connection == null)
-        {
-            InitializeDatabase();
-        }
+            Initialize();
         return _connection;
     }
 
@@ -98,19 +103,18 @@ public class DatabaseManager : MonoBehaviour
     {
         lock (_lock)
         {
-            if (_connection != null)
-            {
-                _connection.Close();
-                _connection = null;
-            }
-
+            CloseConnection();
             DatabaseConfig.DeleteDatabase();
             _isInitialized = false;
             Debug.Log("[DatabaseManager] Database deleted");
         }
     }
 
-    private void OnApplicationQuit()
+    // -------------------------------------------------------
+    // Helper privado
+    // -------------------------------------------------------
+
+    private void CloseConnection()
     {
         if (_connection != null)
         {
@@ -118,15 +122,4 @@ public class DatabaseManager : MonoBehaviour
             _connection = null;
         }
     }
-
-    private void OnDestroy()
-    {
-        if (_connection != null)
-        {
-            _connection.Close();
-            _connection = null;
-        }
-    }
-
-    public bool IsInitialized => _isInitialized;
 }

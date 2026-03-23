@@ -46,6 +46,8 @@ public class BonusSceneManager : MonoBehaviour
     [Header("Visual Settings")]
     [SerializeField] private float inactiveAlpha = 0.6f;
     [SerializeField] private bool useGrayscaleWhenInactive = false;
+    private UserHeaderManager _userHeaderManager;
+    
 
     private readonly Dictionary<string, BonusConfig> bonusConfigs = new Dictionary<string, BonusConfig>()
     {
@@ -267,6 +269,7 @@ public class BonusSceneManager : MonoBehaviour
 
     private void Start()
     {
+        _userHeaderManager = FindFirstObjectByType<UserHeaderManager>();
         SetupButtonListeners();
     }
 
@@ -366,9 +369,9 @@ public class BonusSceneManager : MonoBehaviour
             await userBonusManager.ConsumeBonusAndActivate(userId, bonusName, config.duration, config.multiplier);
             await FetchBonuses();
             
-            if (UserHeaderManager.Instance != null)
+            if (_userHeaderManager != null)
             {
-                UserHeaderManager.Instance.RefreshActiveBonuses();
+                _userHeaderManager.RefreshActiveBonuses();
             }
         }
         catch (Exception e)
@@ -396,9 +399,9 @@ public class BonusSceneManager : MonoBehaviour
 
             await userBonusManager.ConsumeBonusAndActivate(userId, bonusName, config.duration, config.multiplier);
             
-            if (UserHeaderManager.Instance != null)
+            if (_userHeaderManager != null)
             {
-                UserHeaderManager.Instance.RefreshActiveBonuses();
+                _userHeaderManager.RefreshActiveBonuses();
             }
         }
         catch (Exception e)

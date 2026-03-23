@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 public class UserHeaderManager : BarsManager
 {
+    protected INavigationService _navigation;
     [Header("Elementos da User TopBar")]
     [SerializeField] private RawImage avatarImage;
     [SerializeField] private Image avatarImageBackground;
@@ -92,31 +93,15 @@ public class UserHeaderManager : BarsManager
         { "persistenceBonusPro", "Bônus XP Triplicada" }
     };
 
-    // Singleton
-    private static UserHeaderManager _instance;
+
     private float lastVerificationTime = 0f;
     private string pendingAvatarUrl = null;
-
     protected override string BarName => "PersistentUserTopBar";
     protected override string BarChildName => "TopBar";
 
-    public static UserHeaderManager Instance => _instance;
-
     // Events
     public event Action<int> OnBonusMultiplierUpdated;
-
     #region Unity Lifecycle
-
-    protected override void ConfigureSingleton()
-    {
-        if (_instance != null && _instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        _instance = this;
-    }
 
     protected override void OnAwake()
     {
@@ -137,6 +122,7 @@ public class UserHeaderManager : BarsManager
 
     protected override void OnStart()
     {
+        _navigation = AppContext.Navigation;
         UserDataStore.OnUserDataChanged += OnUserDataChanged;
         UpdateFromCurrentUserData();
         InitializeBonusManagement();
@@ -151,9 +137,9 @@ public class UserHeaderManager : BarsManager
 
     protected override void OnCleanup()
     {
-        if (NavigationManager.Instance != null)
+        if (_navigation != null)
         {
-            NavigationManager.Instance.OnNavigationComplete -= OnNavigationComplete;
+            _navigation.OnNavigationComplete -= OnNavigationComplete;
         }
 
         SceneManager.sceneLoaded -= OnSceneLoaded;
@@ -167,20 +153,15 @@ public class UserHeaderManager : BarsManager
             PlayerLevelManager.OnLevelChanged -= OnPlayerLevelChanged;
             PlayerLevelManager.OnLevelProgressUpdated -= OnPlayerLevelProgressUpdated;
         }
-        
-        if (_instance == this)
-        {
-            _instance = null;
-        }
     }
 
     protected override void OnEnable()
     {
         base.OnEnable();
 
-        if (NavigationManager.Instance != null)
+        if (_navigation != null)
         {
-            NavigationManager.Instance.OnNavigationComplete += OnNavigationComplete;
+            _navigation.OnNavigationComplete += OnNavigationComplete;
         }
 
         RefreshPendingAvatar();
@@ -193,9 +174,9 @@ public class UserHeaderManager : BarsManager
 
     private void OnDisable()
     {
-        if (NavigationManager.Instance != null)
+        if (_navigation != null)
         {
-            NavigationManager.Instance.OnNavigationComplete -= OnNavigationComplete;
+            _navigation.OnNavigationComplete -= OnNavigationComplete;
         }
 
         SaveBonusStateToFirestore();
@@ -621,9 +602,9 @@ public class UserHeaderManager : BarsManager
     {
         base.RegisterWithNavigationManager();
 
-        if (NavigationManager.Instance != null)
+        if (_navigation != null)
         {
-            NavigationManager.Instance.OnNavigationComplete += OnNavigationComplete;
+            _navigation.OnNavigationComplete += OnNavigationComplete;
         }
     }
 

@@ -17,6 +17,7 @@ public class ReAuthenticationUI : MonoBehaviour
     [SerializeField] private CanvasGroup deleteAccountCanvasGroup;
 
     private System.Action onReauthenticationSuccess;
+    private IAuthRepository _auth;
 
     private void Awake()
     {
@@ -44,6 +45,7 @@ public class ReAuthenticationUI : MonoBehaviour
 
     private void Start()
     {
+        _auth = AppContext.Auth;
         Debug.Log("ReAuthenticationUI inicializado");
 
         if (reAuthCanvasGroup == null)
@@ -172,7 +174,7 @@ public class ReAuthenticationUI : MonoBehaviour
             if (authenticateButtonText != null) authenticateButtonText.text = "Autenticando...";
             if (errorText != null) errorText.text = "";
 
-            await AuthenticationRepository.Instance.ReauthenticateUser(emailInput.text, passwordInput.text);
+            await _auth.ReauthenticateUser(emailInput.text, passwordInput.text);
             Debug.Log("Reautenticação bem-sucedida");
 
             HideReAuthPanel();

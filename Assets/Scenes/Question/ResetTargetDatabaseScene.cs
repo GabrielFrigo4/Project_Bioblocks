@@ -14,10 +14,17 @@ public class ResetTargetDatabaseScene : MonoBehaviour
     public TextMeshProUGUI databankNameText;
     private string databankName;
     private UserData currentUserData;
+    private INavigationService _navigation;
+    private ISceneDataService _sceneData;
+    private IFirestoreRepository _firestore;
 
     private void Start()
     {
-        var sceneData = SceneDataManager.Instance.GetData();
+        _navigation = AppContext.Navigation;
+        _sceneData  = AppContext.SceneData;
+        _firestore  = AppContext.Firestore;
+
+        var sceneData = _sceneData.GetData();
         if (sceneData != null && sceneData.TryGetValue("databankName", out object value))
         {
             databankName = value as string;
@@ -33,7 +40,7 @@ public class ResetTargetDatabaseScene : MonoBehaviour
 
                 UpdateDatabankNameText();
                 currentUserData = UserDataStore.CurrentUserData;
-                SceneDataManager.Instance.ClearData();
+                _sceneData.ClearData();
 
                 if (isDatabaseInDevelopment)
                 {
@@ -104,9 +111,9 @@ public class ResetTargetDatabaseScene : MonoBehaviour
             string userId = currentUserData.UserId;
             Debug.Log($"Resetando questões respondidas - UserId: {userId}, databankName: {databankName}");
 
-            await FirestoreRepository.Instance.ResetAnsweredQuestions(userId, databankName);
+            await _firestore.ResetAnsweredQuestions(userId, databankName);
             Debug.Log("Questões resetadas com sucesso");
-            await FirestoreRepository.Instance.UpdateUserField(userId, $"ResetDatabankFlags.{databankName}", true);
+            await _firestore.UpdateUserField(userId, $"ResetDatabankFlags.{databankName}", true);
             UserDataStore.MarkDatabankAsReset(databankName, true);
             
             if (PlayerLevelManager.Instance != null)
@@ -155,7 +162,7 @@ public class ResetTargetDatabaseScene : MonoBehaviour
     public void NavigateToPathway()
     {
         Debug.Log("Navegando para PathwayScene");
-        NavigationManager.Instance.NavigateTo("PathwayScene");
+        _navigation.NavigateTo("PathwayScene");
     }
 
     private void ShowDevModeMessage()

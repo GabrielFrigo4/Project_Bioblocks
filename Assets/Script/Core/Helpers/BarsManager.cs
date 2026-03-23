@@ -11,29 +11,48 @@ public abstract class BarsManager : MonoBehaviour
     protected bool isSceneBeingLoaded = false;
     protected abstract string BarName { get; }
     protected abstract string BarChildName { get; }
-    protected bool isDuplicate = false;
+    protected INavigationService _navigation;
 
     protected virtual void Awake()
     {
-        ConfigureSingleton();
-
-        if (isDuplicate)
+        if (AppContext.IsReady)
         {
-            return;
+            InitializeBar();
         }
+        else
+        {
+            AppContext.OnReady += InitializeBar;
+        }
+    }
 
+    private void InitializeBar()
+    {
+        AppContext.OnReady -= InitializeBar;
         DontDestroyOnLoad(gameObject);
         OnAwake();
     }
 
     protected virtual void Start()
     {
+        if (AppContext.IsReady)
+        {
+            InitializeNavigation();
+        }
+        else
+        {
+            AppContext.OnReady += InitializeNavigation;
+        }
+    }
+
+    private void InitializeNavigation()
+    {
+        AppContext.OnReady -= InitializeNavigation;
+        _navigation = AppContext.Navigation;
         RegisterWithNavigationManager();
+
         string activeScene = SceneManager.GetActiveScene().name;
         if (!string.IsNullOrEmpty(activeScene))
-        {
             currentScene = activeScene;
-        }
 
         UpdateBarState(currentScene);
         OnStart();
@@ -41,11 +60,8 @@ public abstract class BarsManager : MonoBehaviour
 
     protected virtual void OnDestroy()
     {
-        if (NavigationManager.Instance != null)
-        {
-            NavigationManager.Instance.OnSceneChanged -= OnSceneChanged;
-        }
-
+        AppContext.OnReady -= InitializeBar;
+        AppContext.OnReady -= InitializeNavigation;
         OnCleanup();
     }
 
@@ -55,20 +71,19 @@ public abstract class BarsManager : MonoBehaviour
         AdjustVisibilityForCurrentScene();
     }
 
-    protected abstract void ConfigureSingleton();
     protected virtual void OnAwake() { }
     protected virtual void OnStart() { }
     protected virtual void OnCleanup() { }
 
     protected virtual void RegisterWithNavigationManager()
     {
-        if (NavigationManager.Instance != null)
-        {
-            NavigationManager.Instance.OnSceneChanged += OnSceneChanged;
-        }
+         if (_navigation != null)
+         {
+             _navigation.OnSceneChanged -= OnSceneChanged;
+         }
         else
         {
-            Debug.LogWarning($"{BarName}: NavigationManager não encontrado!");
+            Debug.LogWarning($"{BarName}: NavigationManager não encontrado no AppContext!");
         }
     }
 

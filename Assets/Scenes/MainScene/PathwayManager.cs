@@ -1,40 +1,63 @@
 ﻿using UnityEngine;
-using TMPro;
-using System.Collections.Generic;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
+/// <summary>
+/// Gerencia a cena principal de seleção de trilhas (Pathway).
+/// </summary>
 public class PathwayManager : MonoBehaviour
 {
+    [SerializeField] private NavigationManager navigationManager;
+
+    // -------------------------------------------------------
+    // Dependências — obtidas do AppContext no Start()
+    // -------------------------------------------------------
+    private IFirestoreRepository _firestore;
+    private IStatisticsProvider _statistics;
+
     private void Start()
     {
-        if (UserDataStore.CurrentUserData != null)
+        _firestore  = AppContext.Firestore;
+        _statistics = AppContext.Statistics;
+
+        if (UserDataStore.CurrentUserData == null)
         {
-            FirestoreRepository.Instance.ListenToUserData(
-                UserDataStore.CurrentUserData.UserId,
-                null,
-                null,
-                null
-            );
+            SceneManager.LoadScene("Login");
+            return;
+        }
 
-            InitializeTopBar();
+        _firestore.ListenToUserData(
+            UserDataStore.CurrentUserData.UserId,
+            onScoreChanged: null,
+            onWeekScoreChanged: null,
+            onAnsweredQuestionsChanged: null
+        );
 
-            AnsweredQuestionsManager.OnAnsweredQuestionsUpdated += HandleAnsweredQuestionsUpdated;
+        InitializeTopBar();
 
-            if (DatabaseStatisticsManager.Instance.IsInitialized)
-            {
-                UpdateAnsweredQuestionsPercentages();
-            }
-            else
-            {
-                DatabaseStatisticsManager.OnStatisticsReady += OnDatabaseStatisticsReady;
-                StartCoroutine(InitializeDatabaseStatistics());
-            }
+        AnsweredQuestionsManager.OnAnsweredQuestionsUpdated += HandleAnsweredQuestionsUpdated;
+
+        if (_statistics.IsInitialized)
+        {
+            UpdateAnsweredQuestionsPercentages();
         }
         else
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Login");
+            DatabaseStatisticsManager.OnStatisticsReady += OnDatabaseStatisticsReady;
+            StartCoroutine(InitializeDatabaseStatistics());
         }
     }
+
+    private void OnDestroy()
+    {
+        AnsweredQuestionsManager.OnAnsweredQuestionsUpdated -= HandleAnsweredQuestionsUpdated;
+        DatabaseStatisticsManager.OnStatisticsReady -= OnDatabaseStatisticsReady;
+    }
+
+    // -------------------------------------------------------
+    // TopBar
+    // -------------------------------------------------------
 
     private void InitializeTopBar()
     {
@@ -45,14 +68,16 @@ public class PathwayManager : MonoBehaviour
         }
     }
 
+    // -------------------------------------------------------
+    // Estatísticas — fallback caso não estejam prontas ainda
+    // -------------------------------------------------------
+
     private IEnumerator InitializeDatabaseStatistics()
     {
         yield return null;
-        var task = DatabaseStatisticsManager.Instance.Initialize();
-        while (!task.IsCompleted)
-        {
-            yield return null;
-        }
+        var task = (_statistics as DatabaseStatisticsManager)?.Initialize();
+        if (task == null) yield break;
+        while (!task.IsCompleted) yield return null;
     }
 
     private void OnDatabaseStatisticsReady()
@@ -61,11 +86,9 @@ public class PathwayManager : MonoBehaviour
         DatabaseStatisticsManager.OnStatisticsReady -= OnDatabaseStatisticsReady;
     }
 
-    private void OnDestroy()
-    {
-        AnsweredQuestionsManager.OnAnsweredQuestionsUpdated -= HandleAnsweredQuestionsUpdated;
-        DatabaseStatisticsManager.OnStatisticsReady -= OnDatabaseStatisticsReady;
-    }
+    // -------------------------------------------------------
+    // Atualização de progresso por banco de questões
+    // -------------------------------------------------------
 
     private void HandleAnsweredQuestionsUpdated(Dictionary<string, int> answeredCounts)
     {
@@ -75,9 +98,7 @@ public class PathwayManager : MonoBehaviour
         {
             string userId = UserDataStore.CurrentUserData.UserId;
             foreach (var kvp in answeredCounts)
-            {
                 AnsweredQuestionsListStore.UpdateAnsweredQuestionsCount(userId, kvp.Key, kvp.Value);
-            }
         }
 
         UpdateAnsweredQuestionsPercentages();
@@ -90,7 +111,7 @@ public class PathwayManager : MonoBehaviour
         string userId = UserDataStore.CurrentUserData.UserId;
         var userCounts = AnsweredQuestionsListStore.GetAnsweredQuestionsCountForUser(userId);
 
-        string[] allDatabases = new string[]
+        string[] allDatabases =
         {
             "AcidBaseBufferQuestionDatabase",
             "AminoacidQuestionDatabase",
@@ -110,23 +131,18 @@ public class PathwayManager : MonoBehaviour
             int totalQuestions = QuestionBankStatistics.GetTotalQuestions(databankName);
             if (totalQuestions <= 0) totalQuestions = 50;
 
-            int percentageAnswered = totalQuestions > 0 ? (count * 100) / totalQuestions : 0;
-            percentageAnswered = Mathf.Min(percentageAnswered, 100);
+            int percentageAnswered = Mathf.Min((count * 100) / totalQuestions, 100);
 
-            string progressObjectName = $"{databankName}Porcentage"; // Sem "Text"
+            string progressObjectName = $"{databankName}Porcentage";
             GameObject progressObject = GameObject.Find(progressObjectName);
 
             if (progressObject != null)
             {
-                CircularProgressIndicator progressIndicator = progressObject.GetComponent<CircularProgressIndicator>();
+                var progressIndicator = progressObject.GetComponent<CircularProgressIndicator>();
                 if (progressIndicator != null)
-                {
                     progressIndicator.SetProgress(percentageAnswered);
-                }
                 else
-                {
                     Debug.LogWarning($"CircularProgressIndicator não encontrado em {progressObjectName}");
-                }
             }
             else
             {
@@ -135,8 +151,15 @@ public class PathwayManager : MonoBehaviour
         }
     }
 
+    // -------------------------------------------------------
+    // Navegação
+    // -------------------------------------------------------
+
     public void Navigate(string sceneName)
     {
-        NavigationManager.Instance.NavigateTo(sceneName);
+        if (navigationManager != null)
+            navigationManager.NavigateTo(sceneName);
+        else
+            Debug.LogError("[PathwayManager] NavigationManager não configurado no Inspector.");
     }
 }

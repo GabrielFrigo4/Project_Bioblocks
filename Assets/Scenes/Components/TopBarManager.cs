@@ -7,6 +7,8 @@ using TMPro;
 
 public class TopBarManager : BarsManager
 {
+    protected INavigationService _navigation;
+
     [System.Serializable]
     public class TopButton
     {
@@ -26,6 +28,7 @@ public class TopBarManager : BarsManager
 
     [Header("Persistência")]
     [SerializeField]
+
     private List<string> scenesWithoutTopBar = new List<string>()
     {
         "LoginView", "RegisterView", "ResetDatabaseView"
@@ -53,17 +56,6 @@ public class TopBarManager : BarsManager
         set { if (nickname) nickname.text = value; }
     }
 
-    protected override void ConfigureSingleton()
-    {
-        if (_instance != null && _instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        _instance = this;
-    }
-
     protected override void OnAwake()
     {
         base.scenesWithoutBar = new List<string>(scenesWithoutTopBar);
@@ -88,9 +80,10 @@ public class TopBarManager : BarsManager
 
     protected override void OnCleanup()
     {
-        if (NavigationManager.Instance != null)
+        if (_navigation != null)
         {
-            NavigationManager.Instance.OnNavigationComplete -= OnNavigationComplete;
+            _navigation.OnNavigationComplete -= OnNavigationComplete;
+
         }
 
         SceneManager.sceneLoaded -= OnSceneLoaded;
@@ -106,9 +99,9 @@ public class TopBarManager : BarsManager
     {
         base.RegisterWithNavigationManager();
 
-        if (NavigationManager.Instance != null)
+        if (_navigation != null)
         {
-            NavigationManager.Instance.OnNavigationComplete += OnNavigationComplete;
+            _navigation.OnNavigationComplete -= OnNavigationComplete;
         }
     }
 
@@ -215,17 +208,17 @@ public class TopBarManager : BarsManager
     {
         base.OnEnable();
 
-        if (NavigationManager.Instance != null)
+        if (_navigation != null)
         {
-            NavigationManager.Instance.OnNavigationComplete += OnNavigationComplete;
+            _navigation.OnNavigationComplete -= OnNavigationComplete;
         }
     }
 
     private void OnDisable()
     {
-        if (NavigationManager.Instance != null)
+        if (_navigation != null)
         {
-            NavigationManager.Instance.OnNavigationComplete -= OnNavigationComplete;
+            _navigation.OnNavigationComplete += OnNavigationComplete;
         }
     }
 

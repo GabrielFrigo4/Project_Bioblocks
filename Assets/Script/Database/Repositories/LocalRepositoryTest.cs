@@ -10,7 +10,7 @@ public class LocalRepositoryTest : MonoBehaviour
 
     void TestLocalRepository()
     {
-        var repo = new LocalRankingRepository();
+        var repo = new LocalRankingRepository(AppContext.LocalDatabase);
         
         var rankings = new List<RankingEntity>
         {

@@ -12,8 +12,18 @@ public class PlayerLevelManager : MonoBehaviour
     public static event Action<int, int> OnLevelChanged;
     public static event Action<int> OnLevelProgressUpdated;
 
+    // -------------------------------------------------------
+    // Dependências — injetadas via Initialize()
+    // -------------------------------------------------------
+    private IFirestoreRepository _firestore;
+    private IStatisticsProvider _statistics;
+
     private UserData currentUserData;
     private bool isInitialized = false;
+
+    // -------------------------------------------------------
+    // Ciclo de vida Unity
+    // -------------------------------------------------------
 
     private void Awake()
     {
@@ -29,19 +39,22 @@ public class PlayerLevelManager : MonoBehaviour
     private void Start()
     {
         Debug.Log("[PlayerLevelManager] Start() chamado");
+
+        // Obtém dependências do AppContext
+        _firestore  = AppContext.Firestore;
+        _statistics = AppContext.Statistics;
+
         UserDataStore.OnUserDataChanged += OnUserDataChanged;
         currentUserData = UserDataStore.CurrentUserData;
-        
+
         if (currentUserData == null)
-        {
-            Debug.LogWarning("[PlayerLevelManager] CurrentUserData é null no Start(). Aguardando evento OnUserDataChanged...");
-        }
+            Debug.LogWarning("[PlayerLevelManager] CurrentUserData é null no Start(). Aguardando OnUserDataChanged...");
         else
         {
             Debug.Log($"[PlayerLevelManager] CurrentUserData encontrado: {currentUserData.UserId}, Level: {currentUserData.PlayerLevel}");
             PerformMigrationIfNeeded();
         }
-        
+
         isInitialized = true;
         Debug.Log("[PlayerLevelManager] Inicialização completa");
     }
@@ -52,23 +65,25 @@ public class PlayerLevelManager : MonoBehaviour
         if (_instance == this) _instance = null;
     }
 
+    // -------------------------------------------------------
+    // Carregamento de dados
+    // -------------------------------------------------------
+
     public void OnUserDataLoaded(UserData userData)
     {
-        Debug.Log($"[PlayerLevelManager] OnUserDataLoaded chamado diretamente. UserId: {userData?.UserId}, Level: {userData?.PlayerLevel}");
-        
+        Debug.Log($"[PlayerLevelManager] OnUserDataLoaded. UserId: {userData?.UserId}, Level: {userData?.PlayerLevel}");
+
         currentUserData = userData;
-        
+
         if (currentUserData != null && isInitialized)
-        {
             PerformMigrationIfNeeded();
-        }
     }
 
     private void OnUserDataChanged(UserData userData)
     {
-        Debug.Log($"[PlayerLevelManager] OnUserDataChanged chamado. UserId: {userData?.UserId}, Level: {userData?.PlayerLevel}");
+        Debug.Log($"[PlayerLevelManager] OnUserDataChanged. UserId: {userData?.UserId}, Level: {userData?.PlayerLevel}");
 
-        bool wasNull = (currentUserData == null);
+        bool wasNull = currentUserData == null;
         currentUserData = userData;
 
         if (wasNull && currentUserData != null && isInitialized)
@@ -78,17 +93,21 @@ public class PlayerLevelManager : MonoBehaviour
         }
     }
 
+    // -------------------------------------------------------
+    // Migração de dados legados
+    // -------------------------------------------------------
+
     private async void PerformMigrationIfNeeded()
     {
         Debug.Log("[PlayerLevelManager] PerformMigrationIfNeeded() INICIADO");
-    
+
         if (currentUserData == null)
         {
             Debug.LogWarning("[PlayerLevelManager] CurrentUserData é null. Abortando migração.");
             return;
         }
 
-        Debug.Log($"[PlayerLevelManager] Verificando migração. PlayerLevel atual: {currentUserData.PlayerLevel}");
+        Debug.Log($"[PlayerLevelManager] PlayerLevel atual: {currentUserData.PlayerLevel}");
 
         if (currentUserData.PlayerLevel <= 1 && currentUserData.TotalValidQuestionsAnswered == 0)
         {
@@ -108,45 +127,22 @@ public class PlayerLevelManager : MonoBehaviour
                 Debug.Log($"[PlayerLevelManager] Total de questões válidas: {totalAnswered}");
 
                 Debug.Log("[PlayerLevelManager] 3/5 - Obtendo total de questões nos bancos...");
-                int totalQuestions = currentUserData.TotalQuestionsInAllDatabanks;
-                if (totalQuestions <= 0)
-                {
-                    if (DatabaseStatisticsManager.Instance != null)
-                    {
-                        totalQuestions = DatabaseStatisticsManager.Instance.GetTotalQuestionsCount();
-                        Debug.Log($"[PlayerLevelManager] Total obtido do DatabaseStatisticsManager: {totalQuestions}");
-                    }
-                    else
-                    {
-                        Debug.LogError("[PlayerLevelManager] DatabaseStatisticsManager.Instance é NULL!");
-                        totalQuestions = 100; // fallback
-                    }
-                }
-
+                int totalQuestions = GetTotalQuestionsCount();
                 Debug.Log($"[PlayerLevelManager] Total de questões nos bancos: {totalQuestions}");
+
                 Debug.Log("[PlayerLevelManager] 4/5 - Calculando level...");
                 int calculatedLevel = PlayerLevelConfig.CalculateLevel(totalAnswered, totalQuestions);
                 currentUserData.PlayerLevel = calculatedLevel;
                 Debug.Log($"[PlayerLevelManager] Level calculado: {calculatedLevel}");
-                Debug.Log("[PlayerLevelManager] 5/5 - Salvando no Firebase...");
 
-                await FirestoreRepository.Instance.UpdateUserField(
-                    currentUserData.UserId,
-                    "PlayerLevel",
-                    calculatedLevel
-                );
+                Debug.Log("[PlayerLevelManager] 5/5 - Salvando no Firebase...");
+                await _firestore.UpdateUserField(currentUserData.UserId, "PlayerLevel", calculatedLevel);
                 Debug.Log("[PlayerLevelManager] PlayerLevel salvo no Firebase");
 
-                await FirestoreRepository.Instance.UpdateUserField(
-                    currentUserData.UserId,
-                    "TotalValidQuestionsAnswered",
-                    totalAnswered
-                );
-
+                await _firestore.UpdateUserField(currentUserData.UserId, "TotalValidQuestionsAnswered", totalAnswered);
                 Debug.Log("[PlayerLevelManager] TotalValidQuestionsAnswered salvo no Firebase");
-                Debug.Log("[PlayerLevelManager] 🔄 Atualizando UserDataStore para disparar evento...");
-                UserDataStore.CurrentUserData = currentUserData;
 
+                UserDataStore.CurrentUserData = currentUserData;
                 Debug.Log($"[PlayerLevelManager] Migração concluída! Level: {calculatedLevel}, Questões: {totalAnswered}");
             }
             catch (Exception e)
@@ -159,9 +155,13 @@ public class PlayerLevelManager : MonoBehaviour
         }
         else
         {
-            Debug.Log($"[PlayerLevelManager] PlayerLevel já está definido ({currentUserData.PlayerLevel}). Migração não necessária.");
+            Debug.Log($"[PlayerLevelManager] PlayerLevel já definido ({currentUserData.PlayerLevel}). Migração não necessária.");
         }
     }
+
+    // -------------------------------------------------------
+    // Progressão
+    // -------------------------------------------------------
 
     public async Task IncrementTotalAnswered()
     {
@@ -169,16 +169,15 @@ public class PlayerLevelManager : MonoBehaviour
 
         currentUserData.TotalValidQuestionsAnswered++;
 
-        await FirestoreRepository.Instance.UpdateUserField(
+        await _firestore.UpdateUserField(
             currentUserData.UserId,
             "TotalValidQuestionsAnswered",
             currentUserData.TotalValidQuestionsAnswered
         );
 
         UserDataStore.UpdateTotalValidQuestionsAnswered(currentUserData.TotalValidQuestionsAnswered);
-
         OnLevelProgressUpdated?.Invoke(currentUserData.TotalValidQuestionsAnswered);
-        
+
         Debug.Log($"[PlayerLevelManager] Total válido: {currentUserData.TotalValidQuestionsAnswered}");
     }
 
@@ -186,12 +185,7 @@ public class PlayerLevelManager : MonoBehaviour
     {
         if (!isInitialized || currentUserData == null) return;
 
-        int totalQuestions = currentUserData.TotalQuestionsInAllDatabanks;
-        if (totalQuestions <= 0)
-        {
-            totalQuestions = DatabaseStatisticsManager.Instance.GetTotalQuestionsCount();
-        }
-
+        int totalQuestions = GetTotalQuestionsCount();
         int oldLevel = currentUserData.PlayerLevel;
         int newLevel = PlayerLevelConfig.CalculateLevel(
             currentUserData.TotalValidQuestionsAnswered,
@@ -214,17 +208,12 @@ public class PlayerLevelManager : MonoBehaviour
 
             await GrantLevelUpBonus(totalBonus);
 
-            await FirestoreRepository.Instance.UpdateUserField(
-                currentUserData.UserId,
-                "PlayerLevel",
-                newLevel
-            );
+            await _firestore.UpdateUserField(currentUserData.UserId, "PlayerLevel", newLevel);
 
             UserDataStore.UpdatePlayerLevel(newLevel);
-
             OnLevelChanged?.Invoke(oldLevel, newLevel);
 
-            Debug.Log($"[PlayerLevelManager] Level atualizado no Firebase e UserDataStore");
+            Debug.Log("[PlayerLevelManager] Level atualizado no Firebase e UserDataStore");
         }
     }
 
@@ -233,7 +222,7 @@ public class PlayerLevelManager : MonoBehaviour
         currentUserData.Score += bonusPoints;
         currentUserData.WeekScore += bonusPoints;
 
-        await FirestoreRepository.Instance.UpdateUserScores(
+        await _firestore.UpdateUserScores(
             currentUserData.UserId,
             bonusPoints,
             0,
@@ -245,21 +234,38 @@ public class PlayerLevelManager : MonoBehaviour
         Debug.Log($"[PlayerLevelManager] Bônus concedido: {bonusPoints} pontos");
     }
 
+    public async Task RecalculateTotalAnswered()
+    {
+        if (!isInitialized || currentUserData == null) return;
+
+        int validTotal = await CalculateValidAnsweredQuestions(currentUserData.UserId);
+        int oldTotal = currentUserData.TotalValidQuestionsAnswered;
+        currentUserData.TotalValidQuestionsAnswered = validTotal;
+
+        await _firestore.UpdateUserField(
+            currentUserData.UserId,
+            "TotalValidQuestionsAnswered",
+            validTotal
+        );
+
+        UserDataStore.UpdateTotalValidQuestionsAnswered(validTotal);
+        Debug.Log($"[PlayerLevelManager] Recalculado: {oldTotal} → {validTotal}");
+        OnLevelProgressUpdated?.Invoke(validTotal);
+    }
+
+    // -------------------------------------------------------
+    // Progresso no nível atual
+    // -------------------------------------------------------
+
     public float GetProgressInCurrentLevel()
     {
         if (currentUserData == null) return 0f;
 
-        int totalQuestions = currentUserData.TotalQuestionsInAllDatabanks;
-        if (totalQuestions <= 0)
-        {
-            totalQuestions = DatabaseStatisticsManager.Instance.GetTotalQuestionsCount();
-        }
-
+        int totalQuestions = GetTotalQuestionsCount();
         int currentLevel = currentUserData.PlayerLevel;
         var threshold = PlayerLevelConfig.GetThresholdForLevel(currentLevel);
 
         float currentPercentage = (float)currentUserData.TotalValidQuestionsAnswered / totalQuestions;
-
         float levelRange = threshold.MaxPercentage - threshold.MinPercentage;
         float progressInLevel = (currentPercentage - threshold.MinPercentage) / levelRange;
 
@@ -271,12 +277,7 @@ public class PlayerLevelManager : MonoBehaviour
         if (currentUserData == null) return 0;
         if (currentUserData.PlayerLevel >= 10) return 0;
 
-        int totalQuestions = currentUserData.TotalQuestionsInAllDatabanks;
-        if (totalQuestions <= 0)
-        {
-            totalQuestions = DatabaseStatisticsManager.Instance.GetTotalQuestionsCount();
-        }
-
+        int totalQuestions = GetTotalQuestionsCount();
         int nextLevel = currentUserData.PlayerLevel + 1;
         var nextThreshold = PlayerLevelConfig.GetThresholdForLevel(nextLevel);
 
@@ -286,55 +287,68 @@ public class PlayerLevelManager : MonoBehaviour
         return Mathf.Max(0, remaining);
     }
 
-    public async Task RecalculateTotalAnswered()
+    // -------------------------------------------------------
+    // Helpers públicos
+    // -------------------------------------------------------
+
+    public int GetCurrentLevel()                  => currentUserData?.PlayerLevel ?? 1;
+    public int GetTotalValidAnswered()             => currentUserData?.TotalValidQuestionsAnswered ?? 0;
+    public int GetTotalQuestionsInAllDatabanks()   => currentUserData?.TotalQuestionsInAllDatabanks ?? 0;
+
+    // -------------------------------------------------------
+    // Helpers privados
+    // -------------------------------------------------------
+
+    /// <summary>
+    /// Retorna o total de questões nos bancos.
+    /// Tenta primeiro o UserData local, depois o IStatisticsProvider injetado.
+    /// </summary>
+    private int GetTotalQuestionsCount()
     {
-        if (!isInitialized || currentUserData == null) return;
+        int total = currentUserData?.TotalQuestionsInAllDatabanks ?? 0;
 
-        int validTotal = await CalculateValidAnsweredQuestions(currentUserData.UserId);
+        if (total <= 0 && _statistics != null)
+        {
+            total = _statistics.GetTotalQuestionsCount();
+            Debug.Log($"[PlayerLevelManager] Total obtido do IStatisticsProvider: {total}");
+        }
 
-        int oldTotal = currentUserData.TotalValidQuestionsAnswered;
-        currentUserData.TotalValidQuestionsAnswered = validTotal;
+        if (total <= 0)
+        {
+            Debug.LogError("[PlayerLevelManager] Não foi possível obter total de questões. Usando fallback 100.");
+            total = 100;
+        }
 
-        await FirestoreRepository.Instance.UpdateUserField(
-            currentUserData.UserId,
-            "TotalValidQuestionsAnswered",
-            validTotal
-        );
-
-        UserDataStore.UpdateTotalValidQuestionsAnswered(validTotal);
-
-        Debug.Log($"[PlayerLevelManager] Recalculado: {oldTotal} → {validTotal}");
-        OnLevelProgressUpdated?.Invoke(validTotal);
+        return total;
     }
 
     private async Task<int> CalculateValidAnsweredQuestions(string userId)
     {
-        Debug.Log($"[PlayerLevelManager] CalculateValidAnsweredQuestions() INICIADO para userId: {userId}");
-        UserData userData = await FirestoreRepository.Instance.GetUserData(userId);
-        
+        Debug.Log($"[PlayerLevelManager] CalculateValidAnsweredQuestions() para userId: {userId}");
+
+        UserData userData = await _firestore.GetUserData(userId);
+
         if (userData == null)
         {
             Debug.LogError("[PlayerLevelManager] GetUserData retornou NULL!");
             return 0;
         }
 
-        Debug.Log($"[PlayerLevelManager] UserData obtido. AnsweredQuestions count: {userData.AnsweredQuestions?.Count ?? 0}");
-        int total = 0;
+        Debug.Log($"[PlayerLevelManager] AnsweredQuestions count: {userData.AnsweredQuestions?.Count ?? 0}");
 
+        int total = 0;
         foreach (var kvp in userData.AnsweredQuestions)
         {
             string databankName = kvp.Key;
-
             bool isReset = userData.ResetDatabankFlags != null &&
-                          userData.ResetDatabankFlags.ContainsKey(databankName) &&
-                          userData.ResetDatabankFlags[databankName];
+                           userData.ResetDatabankFlags.ContainsKey(databankName) &&
+                           userData.ResetDatabankFlags[databankName];
 
             if (!isReset)
             {
-                var distinctQuestions = new HashSet<int>(kvp.Value);
-                int count = distinctQuestions.Count;
+                int count = new HashSet<int>(kvp.Value).Count;
                 total += count;
-                Debug.Log($"[PlayerLevelManager] Banco '{databankName}': {count} questões válidas (não resetado)");
+                Debug.Log($"[PlayerLevelManager] Banco '{databankName}': {count} questões válidas");
             }
             else
             {
@@ -345,8 +359,4 @@ public class PlayerLevelManager : MonoBehaviour
         Debug.Log($"[PlayerLevelManager] Total calculado: {total} questões");
         return total;
     }
-
-    public int GetCurrentLevel() => currentUserData?.PlayerLevel ?? 1;
-    public int GetTotalValidAnswered() => currentUserData?.TotalValidQuestionsAnswered ?? 0;
-    public int GetTotalQuestionsInAllDatabanks() => currentUserData?.TotalQuestionsInAllDatabanks ?? 0;
 }

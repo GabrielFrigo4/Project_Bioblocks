@@ -1,48 +1,36 @@
-
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using TMPro;
 
+/// <summary>
+/// Gerencia as questões respondidas corretamente pelo usuário.
+/// </summary>
 public class AnsweredQuestionsManager : MonoBehaviour
 {
     private static AnsweredQuestionsManager instance;
-    private string userId;
-    private bool isInitialized = false;
+
+    public static AnsweredQuestionsManager Instance => instance;
 
     public delegate void AnsweredQuestionsUpdatedHandler(Dictionary<string, int> answeredCounts);
     public static event AnsweredQuestionsUpdatedHandler OnAnsweredQuestionsUpdated;
 
-    public static AnsweredQuestionsManager Instance
-    {
-        get
-        {
-            if (instance == null)
-            {
-                var go = GameObject.Find("FirebaseManager");
-                if (go != null)
-                {
-                    instance = go.GetComponent<AnsweredQuestionsManager>();
-                    if (instance == null)
-                    {
-                        instance = go.AddComponent<AnsweredQuestionsManager>();
-                    }
-                }
-                else
-                {
-                    Debug.LogError("FirebaseManager GameObject não encontrado!");
-                }
-            }
-            return instance;
-        }
-    }
+    // -------------------------------------------------------
+    // Dependências — obtidas do AppContext no Start()
+    // -------------------------------------------------------
+    private IFirestoreRepository _firestore;
+    private IAuthRepository _auth;
+
+    private string userId;
+    private bool isInitialized = false;
+
+    // -------------------------------------------------------
+    // Ciclo de vida
+    // -------------------------------------------------------
 
     private void Awake()
     {
-        Debug.Log("Attempting to awake...");
         if (instance != null && instance != this)
         {
             Destroy(this);
@@ -55,8 +43,20 @@ public class AnsweredQuestionsManager : MonoBehaviour
 
     private async void Start()
     {
+        _firestore = AppContext.Firestore;
+        _auth      = AppContext.Auth;
+
         await Initialize();
     }
+
+    private void OnDestroy()
+    {
+        if (instance == this) instance = null;
+    }
+
+    // -------------------------------------------------------
+    // Inicialização
+    // -------------------------------------------------------
 
     private async Task Initialize()
     {
@@ -64,42 +64,44 @@ public class AnsweredQuestionsManager : MonoBehaviour
 
         try
         {
-            // Espera um frame para garantir que outros managers foram inicializados
             await Task.Yield();
 
-            if (!FirestoreRepository.Instance.IsInitialized)
+            if (!_firestore.IsInitialized)
             {
-                Debug.LogError("FirestoreRepository não está inicializado");
+                Debug.LogError("[AnsweredQuestionsManager] FirestoreRepository não está inicializado");
                 return;
             }
 
-            if (!AuthenticationRepository.Instance.IsUserLoggedIn())
+            if (!_auth.IsUserLoggedIn())
             {
-                Debug.LogError("Nenhum usuário está autenticado");
+                Debug.LogError("[AnsweredQuestionsManager] Nenhum usuário está autenticado");
                 return;
             }
 
-            userId = AuthenticationRepository.Instance.Auth.CurrentUser.UserId;
-            Debug.Log($"Inicializando AnsweredQuestionsManager para usuário: {userId}");
+            userId = _auth.CurrentUserId;
+            Debug.Log($"[AnsweredQuestionsManager] Inicializando para usuário: {userId}");
 
-            // Configurar listener para atualizações automáticas
-            FirestoreRepository.Instance.ListenToUserData(
+            _firestore.ListenToUserData(
                 userId,
-                null,  // Não precisamos do callback de score aqui
-                null,  // Não precisamos do callback de week score aqui
-                HandleAnsweredQuestionsUpdate  // Método para processar atualizações
+                onScoreChanged: null,
+                onWeekScoreChanged: null,
+                onAnsweredQuestionsChanged: HandleAnsweredQuestionsUpdate
             );
 
             await FetchUserAnsweredQuestions();
             isInitialized = true;
-            Debug.Log("AnsweredQuestionsManager inicializado com sucesso");
+            Debug.Log("[AnsweredQuestionsManager] Inicializado com sucesso");
         }
         catch (Exception e)
         {
-            Debug.LogError($"Erro na inicialização do AnsweredQuestionsManager: {e.Message}");
+            Debug.LogError($"[AnsweredQuestionsManager] Erro na inicialização: {e.Message}");
             isInitialized = false;
         }
     }
+
+    // -------------------------------------------------------
+    // Listener de atualizações em tempo real
+    // -------------------------------------------------------
 
     private void HandleAnsweredQuestionsUpdate(Dictionary<string, List<int>> answeredQuestions)
     {
@@ -114,36 +116,69 @@ public class AnsweredQuestionsManager : MonoBehaviour
                 string databankName = kvp.Key;
                 List<int> questionsList = kvp.Value;
 
-                if (questionsList != null)
-                {
-                    // Remover possíveis duplicatas
-                    var distinctQuestions = questionsList.Distinct().ToList();
+                if (questionsList == null) continue;
 
-                    int count = distinctQuestions.Count;
+                var distinctQuestions = questionsList.Distinct().ToList();
+                int totalQuestions = QuestionBankStatistics.GetTotalQuestions(databankName);
+                if (totalQuestions <= 0) totalQuestions = 50;
 
-                    // Obter o número total de questões neste banco de dados
-                    int totalQuestions = QuestionBankStatistics.GetTotalQuestions(databankName);
-                    if (totalQuestions <= 0) totalQuestions = 50; // Valor padrão
+                int count = Mathf.Min(distinctQuestions.Count, totalQuestions);
+                answeredCounts[databankName] = count;
+                AnsweredQuestionsListStore.UpdateAnsweredQuestionsCount(userId, databankName, count);
 
-                    // Garantir que a contagem não exceda o total
-                    count = Mathf.Min(count, totalQuestions);
-
-                    answeredCounts[databankName] = count;
-                    AnsweredQuestionsListStore.UpdateAnsweredQuestionsCount(userId, databankName, count);
-                    Debug.Log($"Listener atualizou {databankName}: {count} questões respondidas");
-                }
+                Debug.Log($"[AnsweredQuestionsManager] Listener atualizou {databankName}: {count} questões");
             }
 
-            // Disparar evento para notificar componentes da UI
             if (answeredCounts.Count > 0)
-            {
-                Debug.Log($"Disparando evento OnAnsweredQuestionsUpdated via listener com {answeredCounts.Count} bancos de dados");
                 OnAnsweredQuestionsUpdated?.Invoke(answeredCounts);
-            }
         }
         catch (Exception ex)
         {
-            Debug.LogError($"Erro ao processar atualização de questões respondidas: {ex.Message}");
+            Debug.LogError($"[AnsweredQuestionsManager] Erro ao processar atualização: {ex.Message}");
+        }
+    }
+
+    // -------------------------------------------------------
+    // Busca de dados
+    // -------------------------------------------------------
+
+    private async Task FetchUserAnsweredQuestions()
+    {
+        try
+        {
+            UserData userData = await _firestore.GetUserData(userId);
+
+            if (userData?.AnsweredQuestions == null) return;
+
+            Dictionary<string, int> answeredCounts = new Dictionary<string, int>();
+
+            foreach (var kvp in userData.AnsweredQuestions)
+            {
+                string databankName = kvp.Key;
+                List<int> questionsList = kvp.Value;
+
+                if (questionsList == null) continue;
+
+                var distinctQuestions = questionsList.Distinct().ToList();
+
+                if (distinctQuestions.Count != questionsList.Count)
+                    Debug.LogWarning($"[AnsweredQuestionsManager] {questionsList.Count - distinctQuestions.Count} questões duplicadas em {databankName}");
+
+                int totalQuestions = QuestionBankStatistics.GetTotalQuestions(databankName);
+                int count = Mathf.Min(distinctQuestions.Count, totalQuestions);
+
+                answeredCounts[databankName] = count;
+                AnsweredQuestionsListStore.UpdateAnsweredQuestionsCount(userId, databankName, count);
+                Debug.Log($"[AnsweredQuestionsManager] {databankName}: {count} questões respondidas");
+            }
+
+            Debug.Log($"[AnsweredQuestionsManager] Disparando OnAnsweredQuestionsUpdated com {answeredCounts.Count} bancos");
+            OnAnsweredQuestionsUpdated?.Invoke(answeredCounts);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[AnsweredQuestionsManager] Erro ao buscar dados: {e.Message}");
+            throw;
         }
     }
 
@@ -158,80 +193,34 @@ public class AnsweredQuestionsManager : MonoBehaviour
                 await Initialize();
                 if (!isInitialized)
                 {
-                    Debug.LogError("Falha ao inicializar AnsweredQuestionsManager");
+                    Debug.LogError("[AnsweredQuestionsManager] Falha ao inicializar");
                     return answeredQuestions;
                 }
             }
 
-            UserData userData = await FirestoreRepository.Instance.GetUserData(userId);
+            UserData userData = await _firestore.GetUserData(userId);
 
-            if (userData != null &&
-                userData.AnsweredQuestions != null &&
+            if (userData?.AnsweredQuestions != null &&
                 userData.AnsweredQuestions.ContainsKey(target))
             {
                 answeredQuestions = userData.AnsweredQuestions[target]
                     .Select(q => q.ToString())
                     .ToList();
 
-                Debug.Log($"Encontradas {answeredQuestions.Count} questões respondidas para {target}");
+                Debug.Log($"[AnsweredQuestionsManager] {answeredQuestions.Count} questões respondidas em {target}");
             }
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
-            Debug.LogError($"Erro ao buscar questões respondidas para {target}: {e.Message}");
+            Debug.LogError($"[AnsweredQuestionsManager] Erro ao buscar questões de {target}: {e.Message}");
         }
 
         return answeredQuestions;
     }
 
-    private async Task FetchUserAnsweredQuestions()
-    {
-        try
-        {
-            UserData userData = await FirestoreRepository.Instance.GetUserData(userId);
-
-            if (userData != null && userData.AnsweredQuestions != null)
-            {
-                Dictionary<string, int> answeredCounts = new Dictionary<string, int>();
-
-                foreach (var kvp in userData.AnsweredQuestions)
-                {
-                    string databankName = kvp.Key;
-                    List<int> questionsList = kvp.Value;
-
-                    if (questionsList != null)
-                    {
-                        // Remover possíveis duplicatas
-                        var distinctQuestions = questionsList.Distinct().ToList();
-
-                        // Se houver diferença entre as listas, log para debug
-                        if (distinctQuestions.Count != questionsList.Count)
-                        {
-                            Debug.LogWarning($"Encontradas {questionsList.Count - distinctQuestions.Count} questões duplicadas em {databankName}");
-                            Debug.LogWarning($"Lista original: {string.Join(", ", questionsList)}");
-                            Debug.LogWarning($"Lista sem duplicatas: {string.Join(", ", distinctQuestions)}");
-                        }
-
-                        int count = distinctQuestions.Count;
-                        int totalQuestions = QuestionBankStatistics.GetTotalQuestions(databankName);
-                        // Garantir que a contagem não exceda o total real
-                        count = Mathf.Min(count, totalQuestions);
-                        answeredCounts[databankName] = count;
-                        AnsweredQuestionsListStore.UpdateAnsweredQuestionsCount(userId, databankName, count);
-                        Debug.Log($"Atualizado {databankName}: {count} questões respondidas (Lista: {string.Join(", ", distinctQuestions)})");
-                    }
-                }
-
-                Debug.Log($"Disparando evento OnAnsweredQuestionsUpdated com {answeredCounts.Count} bancos de dados");
-                OnAnsweredQuestionsUpdated?.Invoke(answeredCounts);
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"Erro ao buscar dados do usuário: {e.Message}");
-            throw;
-        }
-    }
+    // -------------------------------------------------------
+    // Marcar questão como respondida corretamente
+    // -------------------------------------------------------
 
     public async Task MarkQuestionAsAnswered(string databankName, int questionNumber)
     {
@@ -242,96 +231,95 @@ public class AnsweredQuestionsManager : MonoBehaviour
                 await Initialize();
                 if (!isInitialized)
                 {
-                    Debug.LogError("Falha ao inicializar AnsweredQuestionsManager");
+                    Debug.LogError("[AnsweredQuestionsManager] Falha ao inicializar");
                     return;
                 }
             }
 
-            // Verifica se o usuário existe e está autenticado
             if (string.IsNullOrEmpty(userId))
             {
-                Debug.LogError("Usuário não autenticado");
+                Debug.LogError("[AnsweredQuestionsManager] Usuário não autenticado");
                 return;
             }
 
-            // Obter dados atuais do usuário
-            UserData userData = await FirestoreRepository.Instance.GetUserData(userId);
+            UserData userData = await _firestore.GetUserData(userId);
             if (userData == null)
             {
-                Debug.LogError("Dados do usuário não encontrados");
+                Debug.LogError("[AnsweredQuestionsManager] Dados do usuário não encontrados");
                 return;
             }
 
-            // Verificar se a questão já foi respondida
             bool alreadyAnswered = userData.AnsweredQuestions != null &&
-                                  userData.AnsweredQuestions.ContainsKey(databankName) &&
-                                  userData.AnsweredQuestions[databankName].Contains(questionNumber);
+                                   userData.AnsweredQuestions.ContainsKey(databankName) &&
+                                   userData.AnsweredQuestions[databankName].Contains(questionNumber);
 
             if (!alreadyAnswered)
             {
-                // Usa o método existente UpdateUserScore (não altera o score, apenas marca a questão)
-                await FirestoreRepository.Instance.UpdateUserScore(userId, userData.Score, questionNumber, databankName, true);
-
-                // Força atualização para disparar eventos e atualizar a UI
+                await _firestore.UpdateUserScore(userId, userData.Score, questionNumber, databankName, true);
                 await ForceUpdate();
-
-                Debug.Log($"Questão {questionNumber} marcada como respondida no banco {databankName}");
+                Debug.Log($"[AnsweredQuestionsManager] Questão {questionNumber} marcada em {databankName}");
             }
             else
             {
-                Debug.Log($"Questão {questionNumber} já estava marcada como respondida no banco {databankName}");
+                Debug.Log($"[AnsweredQuestionsManager] Questão {questionNumber} já estava marcada em {databankName}");
             }
         }
         catch (Exception ex)
         {
-            Debug.LogError($"Erro ao marcar questão como respondida: {ex.Message}");
+            Debug.LogError($"[AnsweredQuestionsManager] Erro ao marcar questão: {ex.Message}");
         }
     }
 
-    // Método público para forçar atualização
+    // -------------------------------------------------------
+    // Força atualização
+    // -------------------------------------------------------
+
     public async Task ForceUpdate()
     {
         try
         {
-            Debug.Log("Iniciando ForceUpdate do AnsweredQuestionsManager");
+            Debug.Log("[AnsweredQuestionsManager] ForceUpdate iniciado");
 
             if (!isInitialized)
             {
                 await Initialize();
                 if (!isInitialized)
                 {
-                    Debug.LogError("Falha ao inicializar durante ForceUpdate");
+                    Debug.LogError("[AnsweredQuestionsManager] Falha ao inicializar durante ForceUpdate");
                     return;
                 }
             }
 
             await FetchUserAnsweredQuestions();
-            Debug.Log("ForceUpdate concluído com sucesso");
 
-            // Certifique-se de que o evento seja disparado explicitamente após a atualização
             if (userId != null)
             {
                 var userCounts = AnsweredQuestionsListStore.GetAnsweredQuestionsCountForUser(userId);
                 OnAnsweredQuestionsUpdated?.Invoke(userCounts);
             }
+
+            Debug.Log("[AnsweredQuestionsManager] ForceUpdate concluído");
         }
         catch (Exception e)
         {
-            Debug.LogError($"Erro em ForceUpdate: {e.Message}");
+            Debug.LogError($"[AnsweredQuestionsManager] Erro em ForceUpdate: {e.Message}");
         }
     }
+
+    // -------------------------------------------------------
+    // Questões restantes
+    // -------------------------------------------------------
 
     public async Task<bool> HasRemainingQuestions(string currentDatabase, List<string> currentQuestionList)
     {
         try
         {
-            // Tentar inicializar se ainda não estiver inicializado
             if (!isInitialized)
             {
                 await Initialize();
                 if (!isInitialized)
                 {
-                    Debug.LogError("Falha ao inicializar AnsweredQuestionsManager");
+                    Debug.LogError("[AnsweredQuestionsManager] Falha ao inicializar");
                     return false;
                 }
             }
@@ -339,19 +327,23 @@ public class AnsweredQuestionsManager : MonoBehaviour
             List<string> answeredQuestions = await FetchUserAnsweredQuestionsInTargetDatabase(currentDatabase);
             bool hasRemaining = currentQuestionList.Except(answeredQuestions).Any();
 
-            Debug.Log($"Verificação de questões restantes para {currentDatabase}: " +
-                     $"Total={currentQuestionList.Count}, " +
-                     $"Respondidas={answeredQuestions.Count}, " +
-                     $"Restantes={hasRemaining}");
+            Debug.Log($"[AnsweredQuestionsManager] {currentDatabase}: " +
+                      $"Total={currentQuestionList.Count}, " +
+                      $"Respondidas={answeredQuestions.Count}, " +
+                      $"Restantes={hasRemaining}");
 
             return hasRemaining;
         }
         catch (Exception e)
         {
-            Debug.LogError($"Erro ao verificar questões restantes: {e.Message}");
+            Debug.LogError($"[AnsweredQuestionsManager] Erro ao verificar questões restantes: {e.Message}");
             return false;
         }
     }
+
+    // -------------------------------------------------------
+    // Reset
+    // -------------------------------------------------------
 
     public void ResetManager()
     {

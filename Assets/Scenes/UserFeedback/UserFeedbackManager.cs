@@ -8,6 +8,7 @@ using Firebase.Firestore;
 
 public class UserFeedbackManager : MonoBehaviour
 {
+    private INavigationService _navigation;
     [Header("Configuração")]
     [SerializeField] private Transform questionsContainer;
     [SerializeField] private CanvasGroup questionsCanvasGroup;
@@ -15,7 +16,6 @@ public class UserFeedbackManager : MonoBehaviour
     [SerializeField] private Button prevButton;
     [SerializeField] private Button submitButton;
     [SerializeField] private Button backButton;
-    [SerializeField] private UserHeaderManager topBarManager;
 
     [Header("Loading Spinner Configuration")]
     [SerializeField] private float spinnerRotationSpeed = 100f;
@@ -53,13 +53,8 @@ public class UserFeedbackManager : MonoBehaviour
 
     private void Start()
     {
+        _navigation = AppContext.Navigation;
         logoLoading.SetActive(false);
-
-        topBarManager = UserHeaderManager.Instance;
-        if (topBarManager == null)
-        {
-            Debug.LogError("UserTopBarManager não encontrado!");
-        }
 
         if (questionsContainer == null)
         {
@@ -303,7 +298,7 @@ public class UserFeedbackManager : MonoBehaviour
             if (success)
             {
                 Debug.Log("Feedback submetido com sucesso");
-                NavigationManager.Instance.NavigateTo("ProfileScene");
+                _navigation.NavigateTo("ProfileScene");
             }
         }
         catch (Exception e)
@@ -377,7 +372,7 @@ public class UserFeedbackManager : MonoBehaviour
     public void OnBackButtonClick()
     {
         ClearAllAnswers();
-        NavigationManager.Instance.NavigateTo("ProfileScene");
+        _navigation.NavigateTo("ProfileScene");
     }
 
     private void ClearAllAnswers()

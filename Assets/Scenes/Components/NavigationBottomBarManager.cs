@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 public class NavigationBottomBarManager : BarsManager
 {
+    protected INavigationService _navigation;
     [System.Serializable]
     public class NavButton
     {
@@ -33,30 +34,8 @@ public class NavigationBottomBarManager : BarsManager
     };
 
     private List<NavButton> allButtons = new List<NavButton>();
-    private static NavigationBottomBarManager _instance;
     protected override string BarName => "PersistentBottomBar";
     protected override string BarChildName => "BottomBar";
-
-    public static NavigationBottomBarManager Instance
-    {
-        get { return _instance; }
-    }
-
-    protected override void ConfigureSingleton()
-    {
-        Debug.Log("[BottomBar] ConfigureSingleton chamado");
-
-        if (_instance != null && _instance != this)
-        {
-            Debug.Log("[BottomBar] Duplicata detectada, destruindo...");
-            isDuplicate = true;
-            Destroy(gameObject);
-            return;
-        }
-
-        _instance = this;
-        Debug.Log("[BottomBar] Singleton configurado corretamente");
-    }
 
     protected override void OnAwake()
     {
@@ -112,42 +91,28 @@ public class NavigationBottomBarManager : BarsManager
                 {
                     Debug.Log($"[BottomBar] Botão clicado: {targetButtonName} -> {targetSceneName}");
 
-                    if (NavigationManager.Instance != null)
+                    if (_navigation != null)
                     {
-                        NavigationManager.Instance.NavigateTo(targetSceneName);
+                        _navigation.NavigateTo(targetSceneName);
                     }
                     else
                     {
                         Debug.LogWarning("[BottomBar] NavigationManager não encontrado, tentando novamente...");
-                        StartCoroutine(RetryNavigation(targetSceneName, targetButtonName));
+                        RetryNavigation(targetSceneName, targetButtonName);
                     }
                 });
             }
         }
     }
 
-    private System.Collections.IEnumerator RetryNavigation(string sceneName, string buttonName)
+    private void RetryNavigation(string sceneName, string buttonName)
     {
         Debug.Log($"[BottomBar] RetryNavigation iniciado para: {sceneName}");
 
-        float timeout = 2f;
-        float elapsed = 0f;
-
-        while (NavigationManager.Instance == null && elapsed < timeout)
-        {
-            yield return new WaitForSeconds(0.1f);
-            elapsed += 0.1f;
-        }
-
-        if (NavigationManager.Instance != null)
-        {
-            Debug.Log($"[BottomBar] NavigationManager encontrado, navegando para: {sceneName}");
-            NavigationManager.Instance.NavigateTo(sceneName);
-        }
+        if (_navigation != null)
+            _navigation.NavigateTo(sceneName);
         else
-        {
-            Debug.LogError($"[BottomBar] NavigationManager não encontrado após timeout!");
-        }
+            Debug.LogError($"[BottomBar] _navigation é null — verifique se AppContext.OnReady foi disparado.");
     }
 
     protected override void AdjustVisibilityForCurrentScene()
@@ -277,47 +242,25 @@ public class NavigationBottomBarManager : BarsManager
         yield return null;
         Debug.Log("[BottomBar] ReinitializeForMobile: Aguardado 3 frames");
 
-        float timeout = 3f;
-        float elapsed = 0f;
+        // _navigation já está garantido pelo AppContext.OnReady no BarsManager
+        Debug.Log("[BottomBar] Reinicializando botões...");
+        SetupButtonListeners();
 
-        while (NavigationManager.Instance == null && elapsed < timeout)
+        foreach (var btn in allButtons)
         {
-            yield return new WaitForSeconds(0.1f);
-            elapsed += 0.1f;
+            if (btn.button != null)
+                btn.button.interactable = true;
         }
 
-        if (NavigationManager.Instance != null)
-        {
-            Debug.Log("[BottomBar] NavigationManager encontrado, reinicializando botões...");
-            SetupButtonListeners();
-
-            foreach (var btn in allButtons)
-            {
-                if (btn.button != null)
-                {
-                    btn.button.interactable = true;
-                }
-            }
-
-            Debug.Log($"[BottomBar] Atualizando display após reinicialização para: {sceneName}");
-            UpdateButtonDisplay(sceneName);
-        }
-        else
-        {
-            Debug.LogError("[BottomBar] NavigationManager não foi encontrado após timeout de 3 segundos!");
-        }
+        Debug.Log($"[BottomBar] Atualizando display após reinicialização para: {sceneName}");
+        UpdateButtonDisplay(sceneName);  
     }
 
     protected override void OnCleanup()
     {
         Debug.Log("[BottomBar] OnCleanup chamado");
-
-        if (!isDuplicate && _instance == this)
-        {
-            SceneManager.sceneLoaded -= OnSceneLoadedDirect;
-            Debug.Log("[BottomBar] Listener OnSceneLoadedDirect removido");
-        }
-
+        SceneManager.sceneLoaded -= OnSceneLoadedDirect;
+        Debug.Log("[BottomBar] Listener OnSceneLoadedDirect removido");        
         base.OnCleanup();
     }
 }

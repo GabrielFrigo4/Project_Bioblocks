@@ -8,9 +8,15 @@ public class QuestionScoreManager : MonoBehaviour
     private UserData currentUserData;
     private AnsweredQuestionsManager answeredQuestionsManager;
     private QuestionBonusManager questionBonusManager;
+    private IAuthRepository _auth;
+    private IFirestoreRepository _firestore;
+    private UserHeaderManager _userHeaderManager;
 
     private void Start()
     {
+        _auth      = AppContext.Auth;
+        _firestore = AppContext.Firestore;
+        _userHeaderManager = FindFirstObjectByType<UserHeaderManager>();
         currentUserData = UserDataStore.CurrentUserData;
         answeredQuestionsManager = AnsweredQuestionsManager.Instance;
         questionBonusManager = FindFirstObjectByType<QuestionBonusManager>();
@@ -36,14 +42,14 @@ public class QuestionScoreManager : MonoBehaviour
     {
         try
         {
-            if (AuthenticationRepository.Instance.Auth.CurrentUser == null)
+            if (!_auth.IsUserLoggedIn())
             {
                 Debug.LogError("Usuário não autenticado");
                 return;
             }
     
-            string userId = AuthenticationRepository.Instance.Auth.CurrentUser.UserId;
-            UserData userData = await FirestoreRepository.Instance.GetUserData(userId);
+            string userId = _auth.CurrentUserId;
+            UserData userData = await _firestore.GetUserData(userId);
     
             if (userData == null)
             {
@@ -53,9 +59,9 @@ public class QuestionScoreManager : MonoBehaviour
     
             int actualScoreChange = scoreChange;
     
-            if (isCorrect && UserHeaderManager.Instance != null && UserHeaderManager.Instance.IsAnyBonusActive())
+            if (isCorrect && _userHeaderManager != null && _userHeaderManager.IsAnyBonusActive())
             {
-                actualScoreChange = UserHeaderManager.Instance.ApplyTotalBonus(scoreChange);
+                actualScoreChange = _userHeaderManager.ApplyTotalBonus(scoreChange);
             }
             else if (isCorrect && questionBonusManager != null && questionBonusManager.IsBonusActive())
             {
@@ -78,7 +84,7 @@ public class QuestionScoreManager : MonoBehaviour
                     }
                     else
                     {
-                        await FirestoreRepository.Instance.UpdateUserScores(
+                        await _firestore.UpdateUserScores(
                             userId,
                             actualScoreChange,
                             questionNumber,
@@ -115,7 +121,7 @@ public class QuestionScoreManager : MonoBehaviour
                 {
                     if (database == null || !database.IsDatabaseInDevelopment())
                     {
-                        await FirestoreRepository.Instance.UpdateUserScores(
+                        await _firestore.UpdateUserScores(
                             userId,
                             actualScoreChange,
                             0,
@@ -136,7 +142,7 @@ public class QuestionScoreManager : MonoBehaviour
     
             if (database == null || !database.IsDatabaseInDevelopment())
             {
-                UserData updatedUserData = await FirestoreRepository.Instance.GetUserData(userId);
+                UserData updatedUserData = await _firestore.GetUserData(userId);
     
                 if (updatedUserData != null)
                 {
@@ -177,7 +183,7 @@ public class QuestionScoreManager : MonoBehaviour
 
     public bool HasBonusActive()
     {
-        if (UserHeaderManager.Instance != null && UserHeaderManager.Instance.IsAnyBonusActive())
+        if (_userHeaderManager != null && _userHeaderManager.IsAnyBonusActive())
         {
             return true;
         }
@@ -187,9 +193,9 @@ public class QuestionScoreManager : MonoBehaviour
 
     public int CalculateBonusScore(int baseScore)
     {
-        if (UserHeaderManager.Instance != null && UserHeaderManager.Instance.IsAnyBonusActive())
+       if (_userHeaderManager != null && _userHeaderManager.IsAnyBonusActive())
         {
-            return UserHeaderManager.Instance.ApplyTotalBonus(baseScore);
+            return _userHeaderManager.ApplyTotalBonus(baseScore);
         }
 
         if (questionBonusManager != null && questionBonusManager.IsBonusActive())

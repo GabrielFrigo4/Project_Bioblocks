@@ -18,9 +18,13 @@ public class ProfileImageUploader : MonoBehaviour
     private ProfileImageLoader imageLoader;
     private UserData currentUserData;
     private bool isProcessing = false;
+    private IStorageRepository _storage;
+    private IFirestoreRepository _firestore;
 
     private void Awake()
     {
+        _storage  = AppContext.Storage;
+        _firestore = AppContext.Firestore;
         imageLoader = GetComponent<ProfileImageLoader>();
 
         if (imageLoader == null)
@@ -34,6 +38,8 @@ public class ProfileImageUploader : MonoBehaviour
 
     private void Start()
     {
+        _storage  = AppContext.Storage;
+        _firestore = AppContext.Firestore;
         currentUserData = UserDataStore.CurrentUserData;
 
         if (enableUploadOnStart)
@@ -273,7 +279,7 @@ public class ProfileImageUploader : MonoBehaviour
 
         try
         {
-            task = StorageRepository.Instance.DeleteProfileImageAsync(imageUrl);
+            task = _storage.DeleteProfileImageAsync(imageUrl);
             taskStarted = true;
             Debug.Log($"[ProfileImageUploader] DeleteOldProfileImage - Task criada, aguardando...");
         }
@@ -415,7 +421,7 @@ public class ProfileImageUploader : MonoBehaviour
     {
         try
         {
-            return await StorageRepository.Instance.UploadImageAsync(fileName, imageBytes);
+            return await _storage.UploadImageAsync(fileName, imageBytes);
         }
         catch (Exception e)
         {
@@ -428,7 +434,7 @@ public class ProfileImageUploader : MonoBehaviour
     {
         try
         {
-            await FirestoreRepository.Instance.UpdateUserProfileImageUrl(currentUserData.UserId, imageUrl);
+            await _firestore.UpdateUserProfileImageUrl(currentUserData.UserId, imageUrl);
             currentUserData.ProfileImageUrl = imageUrl;
             UserDataStore.CurrentUserData = currentUserData;
         }

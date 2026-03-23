@@ -6,17 +6,19 @@ using UnityEngine;
 public class LocalRankingRepository : ILocalRankingRepository
 {
     private SQLite4Unity3d.SQLiteConnection _db;
+    private IDatabaseManager _databaseManager;
 
-    public LocalRankingRepository()
+    public LocalRankingRepository(IDatabaseManager databaseManager)
     {
-        _db = DatabaseManager.Instance.GetConnection();
+        _databaseManager = databaseManager;
+        _db = databaseManager.GetConnection();
     }
 
     public void SaveRankings(List<RankingEntity> rankings)
     {
         try
         {
-            DatabaseManager.Instance.ExecuteInTransaction(() =>
+            _databaseManager.ExecuteInTransaction(() =>
             {
                 _db.DeleteAll<RankingEntity>();
                 

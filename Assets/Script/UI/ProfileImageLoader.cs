@@ -13,12 +13,14 @@ public class ProfileImageLoader : MonoBehaviour
     [SerializeField] private bool autoConfigureMask = true;
     [SerializeField] private int maskResolution = 256;
 
+    private IImageCacheService _imageCache;
     private bool isInitialized = false;
     private string pendingImageUrl = null;
 
     private void Awake()
     {
         Initialize();
+        _imageCache = AppContext.ImageCache;
     }
 
     public void Initialize()
@@ -179,11 +181,11 @@ public class ProfileImageLoader : MonoBehaviour
 
     private IEnumerator LoadImageFromUrl(string url)
     {
-        string cachedPath = ImageCacheService.Instance.GetCachedImagePath(url);
+        string cachedPath = _imageCache?.GetCachedImagePath(url);
         
         if (!string.IsNullOrEmpty(cachedPath))
         {
-            Texture2D cachedTexture = ImageCacheService.Instance.LoadImageFromCache(cachedPath);
+            Texture2D cachedTexture = _imageCache?.LoadImageFromCache(cachedPath);
             
             if (cachedTexture != null)
             {
@@ -200,7 +202,7 @@ public class ProfileImageLoader : MonoBehaviour
             {
                 Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
                 SetTexture(texture);
-                ImageCacheService.Instance.SaveImageToCache(url, texture);
+                _imageCache?.SaveImageToCache(url, texture);
             }
             else
             {

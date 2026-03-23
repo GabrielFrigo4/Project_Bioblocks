@@ -6,9 +6,9 @@ public class LocalSyncMetadataRepository
 {
     private SQLite4Unity3d.SQLiteConnection _db;
 
-    public LocalSyncMetadataRepository()
+    public LocalSyncMetadataRepository(IDatabaseManager databaseManager)
     {
-        _db = DatabaseManager.Instance.GetConnection();
+        _db = databaseManager.GetConnection();
     }
 
     public void UpdateSyncMetadata(string entityType, bool success, string error = null)

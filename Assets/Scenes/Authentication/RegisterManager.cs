@@ -1,6 +1,5 @@
 using Firebase;
 using Firebase.Auth;
-using Firebase.Firestore;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -10,6 +9,7 @@ using System.Threading.Tasks;
 
 public class RegisterManager : MonoBehaviour
 {
+    [Header("UI References")]
     [SerializeField] private TMP_InputField nameInput;
     [SerializeField] private TMP_InputField nickNameInput;
     [SerializeField] private TMP_InputField emailInput;
@@ -17,55 +17,60 @@ public class RegisterManager : MonoBehaviour
     [SerializeField] private Button registerButton;
     [SerializeField] private Button backButton;
     [SerializeField] private FeedbackManager feedbackManager;
+    [SerializeField] private LoadingSpinnerComponent loadingSpinner;
 
-    private FirebaseFirestore db;
+    // -------------------------------------------------------
+    // Dependências — obtidas do AppContext no Start()
+    // -------------------------------------------------------
+    private IAuthRepository _auth;
+    private IFirestoreRepository _firestore;
+
     private bool isProcessing = false;
 
     private void Start()
     {
-        db = FirebaseFirestore.DefaultInstance;
+        _auth      = AppContext.Auth;
+        _firestore = AppContext.Firestore;
+
         nickNameInput.contentType = TMP_InputField.ContentType.Standard;
         nickNameInput.characterLimit = 15;
         nickNameInput.onValueChanged.AddListener(ValidateNickname);
         registerButton.onClick.AddListener(HandleRegistration);
     }
 
+    // -------------------------------------------------------
+    // Registro
+    // -------------------------------------------------------
+
     public async void HandleRegistration()
     {
-        if (isProcessing)
-        {
-            return;
-        }
+        if (isProcessing) return;
 
         isProcessing = true;
         SetAllButtonsInteractable(false);
-        LoadingSpinnerComponent.Instance.ShowSpinner();
+        loadingSpinner?.ShowSpinner();
 
         try
         {
-            if (AuthenticationRepository.Instance == null)
+            if (string.IsNullOrEmpty(nickNameInput.text) ||
+                string.IsNullOrEmpty(nameInput.text)     ||
+                string.IsNullOrEmpty(emailInput.text)    ||
+                string.IsNullOrEmpty(passwordInput.text))
             {
-                throw new Exception("NovoFirebaseManager não está inicializado");
+                throw new Exception("Todos os campos são obrigatórios.");
             }
 
-            if (string.IsNullOrEmpty(nickNameInput.text) || string.IsNullOrEmpty(nameInput.text) || string.IsNullOrEmpty(emailInput.text) || string.IsNullOrEmpty(passwordInput.text))
-            {
-                throw new Exception("Todos os campos são obrigatório.");
-            }
-
-            string nicknameToUse = nickNameInput.text;
-
-            bool nicknameExists = await CheckNicknameExistsAsync(nicknameToUse);
+            // Verifica nickname usando o repositório — sem acesso direto ao Firestore
+            bool nicknameExists = await _firestore.AreNicknameTaken(nickNameInput.text);
             if (nicknameExists)
-            {
                 throw new Exception("Este nickname já está em uso. Por favor, escolha outro.");
-            }
 
             Debug.Log("=== LIMPEZA ANTES DE REGISTRAR NOVO USUÁRIO ===");
 
             UserDataStore.CurrentUserData = null;
             Debug.Log("✓ UserDataStore limpo");
 
+            // TODO: AnsweredQuestionsManager será refatorado em etapa futura
             if (AnsweredQuestionsManager.Instance != null)
             {
                 AnsweredQuestionsManager.Instance.ResetManager();
@@ -73,127 +78,107 @@ public class RegisterManager : MonoBehaviour
             }
 
             AnsweredQuestionsListStore.ClearAll();
-
             Debug.Log("=== LIMPEZA CONCLUÍDA, INICIANDO REGISTRO ===");
 
-            await AuthenticationRepository.Instance.RegisterUserAsync(nameInput.text, nickNameInput.text, emailInput.text, passwordInput.text);
+            await _auth.RegisterUserAsync(
+                nameInput.text,
+                nickNameInput.text,
+                emailInput.text,
+                passwordInput.text
+            );
+
             await Task.Delay(300);
 
-            var user = AuthenticationRepository.Instance.Auth.CurrentUser;
-            if (user != null)
-            {
-                var userData = await FirestoreRepository.Instance.GetUserData(user.UserId);
-                if (userData != null)
-                {
-                    UserDataStore.CurrentUserData = userData;
-                    await Task.Delay(300);
-                    await AnsweredQuestionsManager.Instance.ForceUpdate();
-                    await Task.Delay(400);
-                }
-                else
-                {
-                    throw new Exception("Erro ao carregar dados do usuário recém-criado.");
-                }
-            }
+            // Busca os dados do usuário recém-criado usando o userId do Auth
+            string userId = _auth.CurrentUserId;
+            if (string.IsNullOrEmpty(userId))
+                throw new Exception("Erro: usuário criado mas ID não encontrado.");
 
-            LoadingSpinnerComponent.Instance.ShowSpinnerUntilSceneLoaded("PathwayScene");
+            var userData = await _firestore.GetUserData(userId);
+            if (userData == null)
+                throw new Exception("Erro ao carregar dados do usuário recém-criado.");
+
+            UserDataStore.CurrentUserData = userData;
+            await Task.Delay(300);
+
+            await AnsweredQuestionsManager.Instance.ForceUpdate();
+            await Task.Delay(400);
+
+            loadingSpinner?.ShowSpinnerUntilSceneLoaded("PathwayScene");
             SceneManager.LoadScene("PathwayScene");
         }
         catch (FirebaseException e)
         {
             string errorMessage = GetFirebaseAuthErrorMessage(e);
             feedbackManager.ShowFeedback(errorMessage, true);
-            Debug.LogError($"{errorMessage}");
-            LoadingSpinnerComponent.Instance.HideSpinner();
+            Debug.LogError(errorMessage);
+            loadingSpinner?.HideSpinner();
             SetAllButtonsInteractable(true);
             isProcessing = false;
         }
         catch (Exception e)
         {
-            string errorMessage = $"{e.Message}";
-            feedbackManager.ShowFeedback(errorMessage, true);
-            Debug.LogError(errorMessage);
-            LoadingSpinnerComponent.Instance.HideSpinner();
+            feedbackManager.ShowFeedback(e.Message, true);
+            Debug.LogError(e.Message);
+            loadingSpinner?.HideSpinner();
             SetAllButtonsInteractable(true);
             isProcessing = false;
         }
     }
 
-    private void SetAllButtonsInteractable(bool interactable)
+    // -------------------------------------------------------
+    // Navegação
+    // -------------------------------------------------------
+
+    public void SceneLoader()
     {
-        registerButton.interactable = interactable;
-        if (backButton != null)
-        {
-            backButton.interactable = interactable;
-        }
-        
-        nameInput.interactable = interactable;
-        nickNameInput.interactable = interactable;
-        emailInput.interactable = interactable;
-        passwordInput.interactable = interactable;
+        if (isProcessing) return;
+
+        isProcessing = true;
+        SetAllButtonsInteractable(false);
+        loadingSpinner?.ShowSpinnerUntilSceneLoaded("LoginView");
+        SceneManager.LoadScene("LoginView");
     }
+
+    // -------------------------------------------------------
+    // Validação
+    // -------------------------------------------------------
 
     private void ValidateNickname(string value)
     {
         if (value.Length < 3)
-        {
-            string errorMessage = "Nickname deve possuir mais de 3 caracteres.";
-            feedbackManager.ShowFeedback(errorMessage, true);
-        }
+            feedbackManager.ShowFeedback("Nickname deve possuir mais de 3 caracteres.", true);
         else
-        {
             feedbackManager.HideFeedback();
-        }
     }
 
-    private async Task<bool> CheckNicknameExistsAsync(string nickname)
+    // -------------------------------------------------------
+    // UI helpers
+    // -------------------------------------------------------
+
+    private void SetAllButtonsInteractable(bool interactable)
     {
-        try
-        {
-            if (FirebaseApp.DefaultInstance == null)
-            {
-                FirebaseApp.Create();
-            }
-            Query query = db.Collection("Users").WhereEqualTo("nickName", nickname).Limit(1);
-            QuerySnapshot snapshot = await query.GetSnapshotAsync();
-            return snapshot.Count > 0;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Erro ao verificar nickname: {e.Message}");
-            throw;
-        }
+        registerButton.interactable = interactable;
+        if (backButton != null) backButton.interactable = interactable;
+        nameInput.interactable     = interactable;
+        nickNameInput.interactable = interactable;
+        emailInput.interactable    = interactable;
+        passwordInput.interactable = interactable;
     }
+
+    // -------------------------------------------------------
+    // Tradução de erros Firebase
+    // Isolado aqui — se o SDK mudar, só este método é afetado
+    // -------------------------------------------------------
 
     private string GetFirebaseAuthErrorMessage(FirebaseException e)
     {
-        if (e is FirebaseException authException)
+        var errorCode = (int)e.ErrorCode;
+        return errorCode switch
         {
-            var errorCode = (int)authException.ErrorCode;
-            switch (errorCode)
-            {
-                case (int)AuthError.EmailAlreadyInUse:
-                    return "Email já registrado.";
-                case (int)AuthError.WeakPassword:
-                    return "Senha muito fraca.";
-                default:
-                    return $"{e.Message}";
-            }
-        }
-        return $"Ocorreu um erro: {e.Message}";
+            (int)AuthError.EmailAlreadyInUse => "Email já registrado.",
+            (int)AuthError.WeakPassword      => "Senha muito fraca.",
+            _                                => e.Message
+        };
     }
-
-    public void SceneLoader()
-    {
-          if (isProcessing)
-        {
-            return;
-        }
-        
-        isProcessing = true;
-        SetAllButtonsInteractable(false);
-        LoadingSpinnerComponent.Instance.ShowSpinnerUntilSceneLoaded("LoginView");
-        SceneManager.LoadScene("LoginView");
-    }
-
 }

@@ -28,9 +28,12 @@ public class RankingManager : MonoBehaviour
 
     private DateTime lastFetchTime = DateTime.MinValue;
     private bool isFetching = false;
+    private INavigationService _navigation;
+    
 
     protected virtual void Start()
     {
+        _navigation = AppContext.Navigation;
         if (rankingRowPrefab == null || rankingTableContent == null || scrollRect == null)
         {
             Debug.LogError("RankingManager: Referências obrigatórias não configuradas!");
@@ -59,7 +62,7 @@ public class RankingManager : MonoBehaviour
             return;
         }
 
-        if (!FirestoreRepository.Instance.IsInitialized)
+        if (!AppContext.IsReady)
         {
             Debug.LogError("FirestoreRepository não está inicializado");
             return;
@@ -260,7 +263,7 @@ public class RankingManager : MonoBehaviour
 
     public virtual void Navigate(string sceneName)
     {
-        NavigationManager.Instance.NavigateTo(sceneName);
+        _navigation.NavigateTo(sceneName);
     }
 
     public async void OnRefreshButtonClicked()
