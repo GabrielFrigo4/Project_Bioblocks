@@ -617,6 +617,10 @@ public class UserHeaderManager : BarsManager
         if (userData != null)
         {
             UpdateUserInfoDisplay(userData);
+            if (!isBonusSystemInitialized || string.IsNullOrEmpty(userId))
+            {
+                InitializeBonusManagement();
+            }
         }
     }
 
