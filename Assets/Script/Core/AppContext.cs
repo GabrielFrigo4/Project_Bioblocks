@@ -53,6 +53,8 @@ public class AppContext : MonoBehaviour
     public static ISceneDataService    SceneData      { get; private set; }
     public static IDatabaseManager     LocalDatabase  { get; private set; }
     public static IImageCacheService   ImageCache     { get; private set; }
+    public static IImageUploadService  ImageUpload { get; private set; }
+
 
     // -------------------------------------------------------
     // Flag de prontidão — consulte antes de usar os serviços
@@ -101,6 +103,7 @@ public class AppContext : MonoBehaviour
             var sceneDataMgr    = GetComponent<SceneDataManager>();
             var databaseMgr     = GetComponent<DatabaseManager>();
             var imageCacheSvc   = GetComponent<ImageCacheService>();
+            var imageUploadSvc = GetComponent<ImageUploadService>();
 
             if (authRepo == null)
                 throw new System.Exception("[AppContext] AuthenticationRepository não encontrado no GameObject. Adicione o componente.");
@@ -118,6 +121,8 @@ public class AppContext : MonoBehaviour
                 throw new System.Exception("[AppContext] DatabaseStatisticsManager não encontrado no GameObject. Adicione o componente.");
             if (storageRepo == null)
                 throw new System.Exception("[AppContext] StorageRepository não encontrado no GameObject. Adicione o componente.");
+            if (imageUploadSvc == null)
+                throw new Exception("[AppContext] ImageUploadService não encontrado.");
 
             // 3. Inicializa na ordem correta
             await authRepo.InitializeAsync();
@@ -127,8 +132,10 @@ public class AppContext : MonoBehaviour
             // 4. Injeta dependências cruzadas
             //    Auth precisa do Firestore para buscar UserData após login
             authRepo.InjectDependencies(firestoreRepo);
+
             //    Storage precisa do Auth para obter o userId sem chamar FirebaseAuth diretamente
             storageRepo.InjectDependencies(authRepo);
+            imageUploadSvc.InjectDependencies(storageRepo);
 
             // 5. Injeta DatabaseManager no ImageCacheService
             imageCacheSvc.InjectDependencies(databaseMgr);
@@ -148,6 +155,7 @@ public class AppContext : MonoBehaviour
             LocalDatabase  = databaseMgr;
             ImageCache     = imageCacheSvc;
             SceneData   = sceneDataMgr;
+            ImageUpload = imageUploadSvc;
 
             IsReady = true;
             OnReady?.Invoke();
