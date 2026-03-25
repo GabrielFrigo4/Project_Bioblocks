@@ -105,6 +105,7 @@ public class AuthenticationRepository : MonoBehaviour, IAuthRepository
         try
         {
             var result = await _auth.CreateUserWithEmailAndPasswordAsync(email, password);
+            string token = await result.User.TokenAsync(forceRefresh: true);
 
             var user = new UserData
             {
@@ -120,9 +121,7 @@ public class AuthenticationRepository : MonoBehaviour, IAuthRepository
                 AnsweredQuestions = new Dictionary<string, List<int>>()
             };
 
-            // Usa o IFirestoreRepository em vez de acessar o Firestore diretamente
             await _firestore.CreateUserDocument(user);
-
             UserDataStore.CurrentUserData = user;
             return user;
         }

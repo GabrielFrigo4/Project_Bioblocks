@@ -268,7 +268,7 @@ public class ProfileManager : MonoBehaviour
             string currentUserId = UserDataStore.CurrentUserData?.UserId;
             UserDataStore.CurrentUserData = null;
 
-            // TODO: AnsweredQuestionsManager será refatorado em etapa futura
+            if (AnsweredQuestionsManager.Instance != null)
             AnsweredQuestionsManager.Instance.ResetManager();
 
             if (!string.IsNullOrEmpty(currentUserId))

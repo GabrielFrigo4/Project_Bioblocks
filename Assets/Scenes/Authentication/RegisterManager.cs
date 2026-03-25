@@ -101,8 +101,8 @@ public class RegisterManager : MonoBehaviour
             UserDataStore.CurrentUserData = userData;
             await Task.Delay(300);
 
-            await AnsweredQuestionsManager.Instance.ForceUpdate();
-            await Task.Delay(400);
+            if (AnsweredQuestionsManager.Instance != null)
+                await AnsweredQuestionsManager.Instance.ForceUpdate();
 
             loadingSpinner?.ShowSpinnerUntilSceneLoaded("PathwayScene");
             SceneManager.LoadScene("PathwayScene");

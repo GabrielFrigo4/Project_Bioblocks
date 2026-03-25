@@ -71,6 +71,7 @@ public class LoginManager : MonoBehaviour
 
             UserDataStore.CurrentUserData = userData;
 
+            if (AnsweredQuestionsManager.Instance != null)
             await AnsweredQuestionsManager.Instance.ForceUpdate();
 
             loadingSpinner?.ShowSpinnerUntilSceneLoaded("PathwayScene");
