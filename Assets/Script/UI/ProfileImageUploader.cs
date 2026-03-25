@@ -96,43 +96,40 @@ public class ProfileImageUploader : MonoBehaviour
 
     private void RequestGalleryPermission()
     {
-        bool granted = true;
-
-        try
+        NativeGallery.RequestPermissionAsync((permission) =>
         {
-            granted = NativeGallery.CheckPermission(
-                NativeGallery.PermissionType.Read,
-                NativeGallery.MediaType.Image
-            );
-        }
-        catch
-        {
-            granted = true;
-        }
+            Debug.Log($"[ProfileImageUploader] Permissão: {permission}");
 
-        if (!granted)
-        {
-            Debug.LogWarning("[ProfileImageUploader] Permissão para acessar a galeria negada");
-
-            if (AlertManager.Instance != null)
+            if (permission == NativeGallery.Permission.Granted)
             {
-                AlertManager.Instance.ShowAlert(
-                    "Permissão para acessar a galeria negada.\nPor favor, verifique as configurações do seu dispositivo."
-                );
+               OpenGallery();
             }
-            return;
-        }
-
-        OpenGallery();
+            else if (permission == NativeGallery.Permission.ShouldAsk)
+            {
+                OpenGallery();
+            }
+            else
+            {
+                ShowAlert("Permissão negada.\nAcesse as configurações do dispositivo para liberar o acesso à galeria.");
+                NativeGallery.OpenSettings();
+            }
+        },
+        NativeGallery.PermissionType.Read,
+        NativeGallery.MediaType.Image);
     }
 
     private void OpenGallery()
     {
+        Debug.Log("[ProfileImageUploader] Abrindo galeria...");
+
         NativeGallery.GetImageFromGallery((path) =>
         {
+            Debug.Log($"[ProfileImageUploader] Callback da galeria. Path: {path ?? "NULL"}");
+
             if (string.IsNullOrEmpty(path))
             {
                 Debug.Log("[ProfileImageUploader] Nenhuma imagem selecionada");
+                isProcessing = false;
                 return;
             }
 
