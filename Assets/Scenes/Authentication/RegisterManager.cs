@@ -69,14 +69,7 @@ public class RegisterManager : MonoBehaviour
 
             UserDataStore.CurrentUserData = null;
             Debug.Log("✓ UserDataStore limpo");
-
-            // TODO: AnsweredQuestionsManager será refatorado em etapa futura
-            if (AnsweredQuestionsManager.Instance != null)
-            {
-                AnsweredQuestionsManager.Instance.ResetManager();
-                Debug.Log("✓ AnsweredQuestionsManager resetado");
-            }
-
+            AppContext.AnsweredQuestions?.ResetManager();
             AnsweredQuestionsListStore.ClearAll();
             Debug.Log("=== LIMPEZA CONCLUÍDA, INICIANDO REGISTRO ===");
 
@@ -100,10 +93,7 @@ public class RegisterManager : MonoBehaviour
 
             UserDataStore.CurrentUserData = userData;
             await Task.Delay(300);
-
-            if (AnsweredQuestionsManager.Instance != null)
-                await AnsweredQuestionsManager.Instance.ForceUpdate();
-
+            await AppContext.AnsweredQuestions?.ForceUpdate();
             loadingSpinner?.ShowSpinnerUntilSceneLoaded("PathwayScene");
             SceneManager.LoadScene("PathwayScene");
         }

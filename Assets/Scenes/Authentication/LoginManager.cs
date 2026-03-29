@@ -65,10 +65,7 @@ public class LoginManager : MonoBehaviour
                 loginAttempts[email].Reset();
 
             UserDataStore.CurrentUserData = userData;
-
-            if (AnsweredQuestionsManager.Instance != null)
-            await AnsweredQuestionsManager.Instance.ForceUpdate();
-
+            await AppContext.AnsweredQuestions?.ForceUpdate();
             loadingSpinner?.ShowSpinnerUntilSceneLoaded("PathwayScene");
             SceneManager.LoadScene("PathwayScene");
         }

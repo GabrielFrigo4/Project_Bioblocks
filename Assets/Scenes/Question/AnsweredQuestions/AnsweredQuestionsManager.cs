@@ -7,13 +7,9 @@ using System.Collections.Generic;
 /// <summary>
 /// Gerencia as questões respondidas corretamente pelo usuário.
 /// </summary>
-public class AnsweredQuestionsManager : MonoBehaviour
+public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
 {
-    private static AnsweredQuestionsManager instance;
-
-    public static AnsweredQuestionsManager Instance => instance;
-
-    public delegate void AnsweredQuestionsUpdatedHandler(Dictionary<string, int> answeredCounts);
+  public delegate void AnsweredQuestionsUpdatedHandler(Dictionary<string, int> answeredCounts);
     public static event AnsweredQuestionsUpdatedHandler OnAnsweredQuestionsUpdated;
 
     // -------------------------------------------------------
@@ -31,13 +27,6 @@ public class AnsweredQuestionsManager : MonoBehaviour
 
     private void Awake()
     {
-        if (instance != null && instance != this)
-        {
-            Destroy(this);
-            return;
-        }
-
-        instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
@@ -49,10 +38,6 @@ public class AnsweredQuestionsManager : MonoBehaviour
         await Initialize();
     }
 
-    private void OnDestroy()
-    {
-        if (instance == this) instance = null;
-    }
 
     // -------------------------------------------------------
     // Inicialização
@@ -61,7 +46,6 @@ public class AnsweredQuestionsManager : MonoBehaviour
     private async Task Initialize()
     {
         if (isInitialized) return;
-
         try
         {
             await Task.Yield();

@@ -125,7 +125,7 @@ public class QuestionManager : MonoBehaviour
             maxLevelInDatabase = LevelCalculator.GetMaxLevel(allDatabaseQuestions);
             Debug.Log($"📚 Banco {currentDatabaseName} possui {maxLevelInDatabase} níveis");
 
-            List<string> answeredQuestions = await AnsweredQuestionsManager.Instance
+            List<string> answeredQuestions = await AppContext.AnsweredQuestions?
                 .FetchUserAnsweredQuestionsInTargetDatabase(currentDatabaseName);
             int answeredCount = answeredQuestions.Count;
             int totalQuestions = QuestionBankStatistics.GetTotalQuestions(currentDatabaseName);
@@ -278,7 +278,7 @@ public class QuestionManager : MonoBehaviour
 
             Debug.Log($"\n Verificando se nível {questionLevel} foi completado...");
 
-            List<string> answeredQuestions = await AnsweredQuestionsManager.Instance
+            List<string> answeredQuestions = await AppContext.AnsweredQuestions?
                 .FetchUserAnsweredQuestionsInTargetDatabase(databankName);
 
             bool isComplete = LevelCalculator.IsLevelComplete(
@@ -513,7 +513,7 @@ public class QuestionManager : MonoBehaviour
                 return;
             }
 
-            List<string> answeredQuestions = await AnsweredQuestionsManager.Instance
+            List<string> answeredQuestions = await AppContext.AnsweredQuestions?
                 .FetchUserAnsweredQuestionsInTargetDatabase(currentDatabaseName);
 
             int currentLevel = LevelCalculator.CalculateCurrentLevel(
@@ -602,7 +602,8 @@ public class QuestionManager : MonoBehaviour
                 return;
             }
 
-            List<string> answeredQuestionsIds = await AnsweredQuestionsManager.Instance.FetchUserAnsweredQuestionsInTargetDatabase(currentDatabaseName);
+            List<string> answeredQuestionsIds = await AppContext.AnsweredQuestions?
+                .FetchUserAnsweredQuestionsInTargetDatabase(currentDatabaseName);
             var unansweredQuestions = newQuestions
                 .Where(q => !answeredQuestionsIds.Contains(q.questionNumber.ToString()))
                 .ToList();

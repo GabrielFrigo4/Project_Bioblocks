@@ -54,7 +54,7 @@ public class AppContext : MonoBehaviour
     public static IDatabaseManager     LocalDatabase  { get; private set; }
     public static IImageCacheService   ImageCache     { get; private set; }
     public static IImageUploadService  ImageUpload { get; private set; }
-
+    public static IAnsweredQuestionsManager AnsweredQuestions { get; private set; }
 
     // -------------------------------------------------------
     // Flag de prontidão — consulte antes de usar os serviços
@@ -104,6 +104,7 @@ public class AppContext : MonoBehaviour
             var databaseMgr     = GetComponent<DatabaseManager>();
             var imageCacheSvc   = GetComponent<ImageCacheService>();
             var imageUploadSvc = GetComponent<ImageUploadService>();
+            var answeredQuestionsMgr = GetComponent<AnsweredQuestionsManager>();
 
             if (authRepo == null)
                 throw new System.Exception("[AppContext] AuthenticationRepository não encontrado no GameObject. Adicione o componente.");
@@ -123,6 +124,8 @@ public class AppContext : MonoBehaviour
                 throw new System.Exception("[AppContext] StorageRepository não encontrado no GameObject. Adicione o componente.");
             if (imageUploadSvc == null)
                 throw new Exception("[AppContext] ImageUploadService não encontrado.");
+            if (answeredQuestionsMgr == null)
+                throw new Exception("[AppContext] AnsweredQuestionsManager não encontrado.");
 
             // 3. Inicializa na ordem correta
             await authRepo.InitializeAsync();
@@ -156,6 +159,7 @@ public class AppContext : MonoBehaviour
             ImageCache     = imageCacheSvc;
             SceneData   = sceneDataMgr;
             ImageUpload = imageUploadSvc;
+            AnsweredQuestions = answeredQuestionsMgr;
 
             IsReady = true;
             OnReady?.Invoke();

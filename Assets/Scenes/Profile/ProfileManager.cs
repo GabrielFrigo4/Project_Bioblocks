@@ -276,9 +276,7 @@ public class ProfileManager : MonoBehaviour
 
             string currentUserId = UserDataStore.CurrentUserData?.UserId;
             UserDataStore.CurrentUserData = null;
-
-            if (AnsweredQuestionsManager.Instance != null)
-            AnsweredQuestionsManager.Instance.ResetManager();
+            AppContext.AnsweredQuestions?.ResetManager();
 
             if (!string.IsNullOrEmpty(currentUserId))
                 AnsweredQuestionsListStore.ClearUserAnsweredQuestions(currentUserId);
@@ -372,7 +370,7 @@ public class ProfileManager : MonoBehaviour
     public void DeleteAccountButton()
     {
         StartCoroutine(DeleteAccountAsync().AsCoroutine());
-    }
+    }           
 
     public async Task DeleteAccountAsync(bool isRetry = false)
     {
@@ -437,12 +435,7 @@ public class ProfileManager : MonoBehaviour
                 ReenableSceneInteractions();
 
                 UserDataStore.CurrentUserData = null;
-
-                if (AnsweredQuestionsManager.Instance != null)
-                {
-                    AnsweredQuestionsManager.Instance.ResetManager();
-                    Debug.Log("✓ AnsweredQuestionsManager resetado");
-                }
+            
 
                 AnsweredQuestionsListStore.ClearAll();
                 Debug.Log("=== LIMPEZA COMPLETA FINALIZADA ===");

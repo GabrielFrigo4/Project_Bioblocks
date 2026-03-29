@@ -18,17 +18,11 @@ public class QuestionScoreManager : MonoBehaviour
         _firestore = AppContext.Firestore;
         _userHeaderManager = FindFirstObjectByType<UserHeaderManager>();
         currentUserData = UserDataStore.CurrentUserData;
-        answeredQuestionsManager = AnsweredQuestionsManager.Instance;
         questionBonusManager = FindFirstObjectByType<QuestionBonusManager>();
 
         if (currentUserData == null)
         {
             Debug.LogError("CurrentUserData é null no ScoreManager");
-        }
-
-        if (answeredQuestionsManager == null)
-        {
-            Debug.LogError("AnsweredQuestionsManager não encontrado");
         }
 
         if (questionBonusManager == null)
@@ -79,8 +73,10 @@ public class QuestionScoreManager : MonoBehaviour
                 {
                     if (database != null && database.IsDatabaseInDevelopment())
                     {
-                        await SafeAnsweredQuestionsManager.Instance.MarkQuestionAsAnswered(questionNumber, database);
-                        Debug.Log($"[QuestionScoreManager] Modo DEV - Questão {questionNumber} NÃO salva no Firebase");
+                        await AppContext.AnsweredQuestions.MarkQuestionAsAnswered(
+                            answeredQuestion.questionDatabankName, 
+                            questionNumber
+                        );
                     }
                     else
                     {
