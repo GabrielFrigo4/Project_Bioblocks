@@ -171,4 +171,9 @@ public class FakeFirestoreRepository : IFirestoreRepository
         onWeekScoreChanged?.Invoke(user.WeekScore);
         onAnsweredQuestionsChanged?.Invoke(user.AnsweredQuestions);
     }
+
+    public void StopListening()
+    {
+        // Em testes, não faz nada
+    }
 }

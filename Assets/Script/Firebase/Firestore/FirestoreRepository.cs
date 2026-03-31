@@ -10,6 +10,7 @@ public class FirestoreRepository : MonoBehaviour, IFirestoreRepository
     private FirebaseFirestore db;
     private bool isInitialized;
     public bool IsInitialized => isInitialized;
+    private ListenerRegistration _userDataListener;
 
     public void Initialize()
     {
@@ -268,8 +269,9 @@ public class FirestoreRepository : MonoBehaviour, IFirestoreRepository
         Action<int> onWeekScoreChanged = null,
         Action<Dictionary<string, List<int>>> onAnsweredQuestionsChanged = null)
     {
-        db.Collection("Users").Document(userId)
-        .Listen(snapshot =>
+        _userDataListener?.Stop();
+        _userDataListener = db.Collection("Users").Document(userId)
+            .Listen(snapshot =>
         {
             if (snapshot.Exists)
             {
@@ -328,6 +330,23 @@ public class FirestoreRepository : MonoBehaviour, IFirestoreRepository
                 }
             }
         });
+
+        Debug.Log($"[FirestoreRepository] Listener iniciado para userId: {userId}");
+    }
+
+    public void StopListening()
+    {
+        if (_userDataListener != null)
+        {
+            _userDataListener.Stop();
+            _userDataListener = null;
+            Debug.Log("[FirestoreRepository] Listener cancelado.");
+        }
+    }
+
+    private void OnDestroy()
+    {
+        StopListening();
     }
 
     public async Task UpdateUserProgress(string userId, int progress)

@@ -44,4 +44,6 @@ public interface IFirestoreRepository
         Action<int> onWeekScoreChanged = null,
         Action<Dictionary<string, List<int>>> onAnsweredQuestionsChanged = null
     );
+
+    void StopListening();
 }
