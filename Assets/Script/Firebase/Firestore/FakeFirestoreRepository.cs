@@ -132,13 +132,6 @@ public class FakeFirestoreRepository : IFirestoreRepository
         return Task.CompletedTask;
     }
 
-    public Task ResetAllWeeklyScores()
-    {
-        foreach (var user in _users.Values)
-            user.WeekScore = 0;
-        return Task.CompletedTask;
-    }
-
     public Task EnsureWeekScoreField() => Task.CompletedTask;
 
     public Task DeleteDocument(string collection, string documentId)

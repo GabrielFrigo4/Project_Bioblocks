@@ -536,54 +536,6 @@ public class FirestoreRepository : MonoBehaviour, IFirestoreRepository
         }
     }
 
-    public async Task ResetAllWeeklyScores()
-    {
-        try
-        {
-            if (!isInitialized) throw new Exception("Firestore não inicializado");
-
-            QuerySnapshot querySnapshot = await db.Collection("Users").GetSnapshotAsync();
-
-            if (!querySnapshot.Documents.Any())
-            {
-                Debug.Log("Nenhum usuário encontrado para resetar scores semanais");
-                return;
-            }
-
-            WriteBatch batch = db.StartBatch();
-            int userCount = 0;
-
-            foreach (DocumentSnapshot doc in querySnapshot.Documents)
-            {
-                batch.Update(doc.Reference, "WeekScore", 0);
-                userCount++;
-
-                if (userCount >= 450)
-                {
-                    await batch.CommitAsync();
-                    batch = db.StartBatch();
-                    userCount = 0;
-                }
-            }
-
-            if (userCount > 0)
-                await batch.CommitAsync();
-
-            if (UserDataStore.CurrentUserData != null)
-            {
-                UserDataStore.CurrentUserData.WeekScore = 0;
-                UserDataStore.UpdateScore(UserDataStore.CurrentUserData.Score);
-            }
-
-            Debug.Log("Todos os scores semanais foram resetados com sucesso");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Erro ao resetar scores semanais: {e.Message}");
-            throw;
-        }
-    }
-
     public async Task EnsureWeekScoreField()
     {
         try
