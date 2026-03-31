@@ -32,6 +32,7 @@ using System;
 ///       auth:      new FakeAuthRepository()
 ///   );
 /// </summary>
+/// 
 public class AppContext : MonoBehaviour
 {
     // -------------------------------------------------------
