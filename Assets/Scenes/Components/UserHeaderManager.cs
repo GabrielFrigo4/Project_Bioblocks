@@ -127,10 +127,10 @@ public class UserHeaderManager : BarsManager
         UpdateFromCurrentUserData();
         InitializeBonusManagement();
 
-        if (PlayerLevelManager.Instance != null)
+        if (AppContext.PlayerLevel != null)
         {
-            PlayerLevelManager.OnLevelChanged += OnPlayerLevelChanged;
-            PlayerLevelManager.OnLevelProgressUpdated += OnPlayerLevelProgressUpdated;
+            AppContext.PlayerLevel.OnLevelChanged += OnPlayerLevelChanged;
+            AppContext.PlayerLevel.OnLevelProgressUpdated += OnPlayerLevelProgressUpdated;
             UpdatePlayerLevelUI();
         }
     }
@@ -148,10 +148,10 @@ public class UserHeaderManager : BarsManager
         StopBonusTimer();
         SaveBonusStateToFirestore();
 
-        if (PlayerLevelManager.Instance != null)
+        if (AppContext.PlayerLevel != null)
         {
-            PlayerLevelManager.OnLevelChanged -= OnPlayerLevelChanged;
-            PlayerLevelManager.OnLevelProgressUpdated -= OnPlayerLevelProgressUpdated;
+            AppContext.PlayerLevel.OnLevelChanged -= OnPlayerLevelChanged;
+            AppContext.PlayerLevel.OnLevelProgressUpdated -= OnPlayerLevelProgressUpdated;
         }
     }
 
@@ -809,16 +809,14 @@ public class UserHeaderManager : BarsManager
 
     private void UpdatePlayerLevelUI()
     {
-        if (PlayerLevelManager.Instance == null) return;
+        if (AppContext.PlayerLevel == null) return;
 
-        int currentLevel = PlayerLevelManager.Instance.GetCurrentLevel();
-        int questionsAnswered = PlayerLevelManager.Instance.GetTotalValidAnswered();
-        int questionsUntilNext = PlayerLevelManager.Instance.GetQuestionsUntilNextLevel();
+        int currentLevel       = AppContext.PlayerLevel.GetCurrentLevel();
+        int questionsAnswered  = AppContext.PlayerLevel.GetTotalValidAnswered();
+        int questionsUntilNext = AppContext.PlayerLevel.GetQuestionsUntilNextLevel();
 
         if (playerLevelText != null)
-        {
             playerLevelText.text = currentLevel.ToString();
-        }
 
         if (playerLevelBackground != null && levelColors != null && levelColors.Length >= 10)
         {
@@ -830,19 +828,17 @@ public class UserHeaderManager : BarsManager
         {
             if (playerLevelProgressBarManager != null)
             {
-                int maxQuestions = PlayerLevelManager.Instance.GetTotalQuestionsInAllDatabanks();
+                int maxQuestions = AppContext.PlayerLevel.GetTotalQuestionsInAllDatabanks();
                 playerLevelProgressBarManager.UpdateProgress(maxQuestions, maxQuestions, "MÁXIMO!");
             }
 
             if (playerLevelProgressText != null)
-            {
                 playerLevelProgressText.text = "MÁXIMO!";
-            }
         }
         else
         {
             int nextLevelTotal = questionsAnswered + questionsUntilNext;
-            int nextLevel = currentLevel + 1;
+            int nextLevel      = currentLevel + 1;
 
             if (playerLevelProgressBarManager != null)
             {
@@ -851,29 +847,16 @@ public class UserHeaderManager : BarsManager
                     nextLevelTotal,
                     $"Level {currentLevel}"
                 );
-
                 Debug.Log($"[UserHeaderManager] Barra animada: {questionsAnswered}/{nextLevelTotal}");
             }
 
             if (playerLevelProgressText != null)
             {
-                float percentageToNext = (questionsUntilNext / (float)nextLevelTotal) * 100f;
-                int roundedPercentage = Mathf.RoundToInt(percentageToNext);
+                float percentageToNext  = (questionsUntilNext / (float)nextLevelTotal) * 100f;
+                int   roundedPercentage = Mathf.RoundToInt(percentageToNext);
                 playerLevelProgressText.text = $"{roundedPercentage}% para o Level {nextLevel}";
             }
         }
-    }
-
-    #endregion
-
-    #region Nested Classes
-
-    private class BonusInfo
-    {
-        public string bonusName;
-        public float remainingTime;
-        public int multiplier;
-        public string displayName;
     }
 
     #endregion

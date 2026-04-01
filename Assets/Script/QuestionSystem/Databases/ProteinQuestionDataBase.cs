@@ -1272,23 +1272,9 @@ public class ProteinQuestionDatabase : MonoBehaviour, IQuestionDatabase
         }
     };
 
-    public List<Question> GetQuestions()
-    {
-        return questions;
-    }
-
-    public QuestionSet GetQuestionSetType()
-    {
-        return QuestionSet.proteins;
-    }
-
-    public string GetDatabankName()
-    {
-        return "ProteinQuestionDatabase";
-    }
-
-    public bool IsDatabaseInDevelopment()
-    {
-        return databaseInDevelopment;
-    }
+    public List<Question> GetQuestions() => questions;
+    public QuestionSet GetQuestionSetType() => QuestionSet.proteins;
+    public string GetDatabankName()  => "ProteinQuestionDatabase";
+    public string GetDisplayName()   => "Proteínas";
+    public bool IsDatabaseInDevelopment() => databaseInDevelopment;
 }

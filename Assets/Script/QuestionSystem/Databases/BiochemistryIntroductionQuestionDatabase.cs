@@ -1096,23 +1096,9 @@ public class BiochemistryIntroductionQuestionDatabase : MonoBehaviour, IQuestion
         }   
     };
 
-    public List<Question> GetQuestions()
-    {
-        return questions;
-    }
-
-    public QuestionSet GetQuestionSetType()
-    {
-        return QuestionSet.biochem;
-    }
-
-    public string GetDatabankName()
-    {
-        return "BiochemistryIntroductionQuestionDatabase";
-    }
-
-    public bool IsDatabaseInDevelopment()
-    {
-        return databaseInDevelopment;
-    }
+    public List<Question> GetQuestions() => questions;
+    public QuestionSet GetQuestionSetType() => QuestionSet.biochem;
+    public string GetDatabankName()  => "BiochemistryIntroductionQuestionDatabase";
+    public string GetDisplayName()   => "Introdução à Bioquímica";
+    public bool IsDatabaseInDevelopment() => databaseInDevelopment;
 }

@@ -1235,24 +1235,10 @@ public class AminoacidQuestionDatabase : MonoBehaviour, IQuestionDatabase
             questionInDevelopment = false
         }
     };
-      
-    public List<Question> GetQuestions()
-    {
-        return questions;
-    }
 
-    public QuestionSet GetQuestionSetType()
-    {
-        return QuestionSet.aminoacids;
-    }
-
-    public string GetDatabankName()
-    {
-        return "AminoacidQuestionDatabase";
-    }
-
-    public bool IsDatabaseInDevelopment()
-    {
-        return databaseInDevelopment;
-    }
+    public List<Question> GetQuestions() => questions;
+    public QuestionSet GetQuestionSetType() => QuestionSet.aminoacids;
+    public string GetDatabankName()  => "AminoacidQuestionDatabase";
+    public string GetDisplayName()   => "Aminoácidos e peptídeos";
+    public bool IsDatabaseInDevelopment() => databaseInDevelopment;
 }

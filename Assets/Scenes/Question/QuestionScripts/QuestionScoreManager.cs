@@ -11,12 +11,14 @@ public class QuestionScoreManager : MonoBehaviour
     private IAuthRepository _auth;
     private IFirestoreRepository _firestore;
     private UserHeaderManager _userHeaderManager;
+    private IPlayerLevelService _playerLevel;
 
     private void Start()
     {
         _auth      = AppContext.Auth;
         _firestore = AppContext.Firestore;
         _userHeaderManager = FindFirstObjectByType<UserHeaderManager>();
+        _playerLevel = AppContext.PlayerLevel;
         currentUserData = UserDataStore.CurrentUserData;
         questionBonusManager = FindFirstObjectByType<QuestionBonusManager>();
 
@@ -78,10 +80,10 @@ public class QuestionScoreManager : MonoBehaviour
 
                         bool isDatabankReset = UserDataStore.IsDatabankReset(databankName);
 
-                        if (!isDatabankReset && PlayerLevelManager.Instance != null)
+                        if (_playerLevel != null)
                         {
-                            await PlayerLevelManager.Instance.IncrementTotalAnswered();
-                            await PlayerLevelManager.Instance.CheckAndHandleLevelUp();
+                            await _playerLevel.IncrementTotalAnswered();
+                            await _playerLevel.CheckAndHandleLevelUp();
                         }
                     }
                 }

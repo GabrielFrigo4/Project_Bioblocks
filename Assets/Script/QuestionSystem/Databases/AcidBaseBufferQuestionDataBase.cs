@@ -1218,23 +1218,9 @@ public class AcidBaseBufferQuestionDatabase : MonoBehaviour, IQuestionDatabase
         }
     };
 
-    public List<Question> GetQuestions()
-    {
-        return questions;
-    }
-
-    public QuestionSet GetQuestionSetType()
-    {
-        return QuestionSet.acidsBase;
-    }
-
-    public string GetDatabankName()
-    {
-        return "AcidBaseBufferQuestionDatabase";
-    }
-
-    public bool IsDatabaseInDevelopment()
-    {
-        return databaseInDevelopment;
-    }
+    public List<Question> GetQuestions() => questions;
+    public QuestionSet GetQuestionSetType() => QuestionSet.acidsBase;
+    public string GetDatabankName()  => "AcidBaseBufferQuestionDatabase";
+    public string GetDisplayName()   => "Ácidos, Bases e Tampões";
+    public bool IsDatabaseInDevelopment() => databaseInDevelopment;
 }
