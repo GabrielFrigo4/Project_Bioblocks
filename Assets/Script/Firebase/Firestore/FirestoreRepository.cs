@@ -210,34 +210,62 @@ public class FirestoreRepository : MonoBehaviour, IFirestoreRepository
     }
 
     public void ListenToUserData(
-        string userId,
-        Action<int> onScoreChanged = null,
-        Action<int> onWeekScoreChanged = null,
-        Action<Dictionary<string, List<int>>> onAnsweredQuestionsChanged = null)
+    string userId,
+    Action<int> onScoreChanged = null,
+    Action<int> onWeekScoreChanged = null,
+    Action<Dictionary<string, List<int>>> onAnsweredQuestionsChanged = null)
     {
         _userDataListener?.Stop();
         _userDataListener = db.Collection("Users").Document(userId)
             .Listen(snapshot =>
-        {
-            if (snapshot.Exists)
             {
-                Dictionary<string, object> data = snapshot.ToDictionary();
+                if (!snapshot.Exists) return;
 
-                if (onScoreChanged != null && data.ContainsKey("Score"))
+                Dictionary<string, object> data = snapshot.ToDictionary();
+                UserData currentUserData = UserDataStore.CurrentUserData;
+
+                // Score
+                if (data.ContainsKey("Score"))
                 {
                     int newScore = Convert.ToInt32(data["Score"]);
                     UserDataStore.UpdateScore(newScore);
-                    onScoreChanged.Invoke(newScore);
+                    onScoreChanged?.Invoke(newScore);
                 }
 
-                if (onWeekScoreChanged != null && data.ContainsKey("WeekScore"))
+                // WeekScore
+                if (data.ContainsKey("WeekScore"))
                 {
                     int newWeekScore = Convert.ToInt32(data["WeekScore"]);
-                    if (UserDataStore.CurrentUserData != null)
+                    if (currentUserData != null)
                         UserDataStore.UpdateWeekScore(newWeekScore);
-                    onWeekScoreChanged.Invoke(newWeekScore);
+                    onWeekScoreChanged?.Invoke(newWeekScore);
                 }
 
+                // TotalValidQuestionsAnswered
+                if (data.ContainsKey("TotalValidQuestionsAnswered") && currentUserData != null)
+                {
+                    int total = Convert.ToInt32(data["TotalValidQuestionsAnswered"]);
+                    if (currentUserData.TotalValidQuestionsAnswered != total)
+                    {
+                        currentUserData.TotalValidQuestionsAnswered = total;
+                        UserDataStore.UpdateTotalValidQuestionsAnswered(total);
+                        Debug.Log($"[FirestoreRepository] TotalValidQuestionsAnswered atualizado: {total}");
+                    }
+                }
+
+                // PlayerLevel
+                if (data.ContainsKey("PlayerLevel") && currentUserData != null)
+                {
+                    int level = Convert.ToInt32(data["PlayerLevel"]);
+                    if (currentUserData.PlayerLevel != level)
+                    {
+                        currentUserData.PlayerLevel = level;
+                        UserDataStore.UpdatePlayerLevel(level);
+                        Debug.Log($"[FirestoreRepository] PlayerLevel atualizado: {level}");
+                    }
+                }
+
+                // AnsweredQuestions
                 if (onAnsweredQuestionsChanged != null && data.ContainsKey("AnsweredQuestions"))
                 {
                     try
@@ -249,8 +277,8 @@ public class FirestoreRepository : MonoBehaviour, IFirestoreRepository
                         {
                             foreach (var kvp in answeredQuestionsData)
                             {
-                                string databankName = kvp.Key;
-                                var questionsList = kvp.Value as IEnumerable<object>;
+                                string databankName  = kvp.Key;
+                                var    questionsList = kvp.Value as IEnumerable<object>;
 
                                 if (questionsList != null)
                                 {
@@ -266,16 +294,19 @@ public class FirestoreRepository : MonoBehaviour, IFirestoreRepository
                                 }
                             }
 
+                            // Atualiza também o UserDataStore com as questões respondidas
+                            if (currentUserData != null)
+                                currentUserData.AnsweredQuestions = answeredQuestions;
+
                             onAnsweredQuestionsChanged.Invoke(answeredQuestions);
                         }
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogError($"Erro ao processar AnsweredQuestions do Firestore: {ex.Message}");
+                        Debug.LogError($"[FirestoreRepository] Erro ao processar AnsweredQuestions: {ex.Message}");
                     }
                 }
-            }
-        });
+            });
 
         Debug.Log($"[FirestoreRepository] Listener iniciado para userId: {userId}");
     }

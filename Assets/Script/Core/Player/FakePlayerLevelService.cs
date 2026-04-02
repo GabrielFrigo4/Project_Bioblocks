@@ -35,5 +35,20 @@ public class FakePlayerLevelService : IPlayerLevelService
     public int GetTotalValidAnswered()           => TotalAnswered;
     public int GetTotalQuestionsInAllDatabanks() => 100; // valor fixo para testes
     public float GetProgressInCurrentLevel()     => 0f;
-    public int GetQuestionsUntilNextLevel()      => 10 - (TotalAnswered % 10);
+    
+    public int GetQuestionsUntilNextLevel()
+    {
+        int totalQuestions  = GetTotalQuestionsInAllDatabanks(); // 100
+        int nextLevel       = CurrentLevel + 1;
+        var nextThreshold   = PlayerLevelConfig.GetThresholdForLevel(nextLevel);
+        int questionsNeeded = nextThreshold.GetMinRequiredQuestions(totalQuestions);
+        return UnityEngine.Mathf.Max(0, questionsNeeded - TotalAnswered);
+    }
+
+    public int GetQuestionsAtLevelStart()
+    {
+        int totalQuestions    = GetTotalQuestionsInAllDatabanks(); // 100
+        var currentThreshold  = PlayerLevelConfig.GetThresholdForLevel(CurrentLevel);
+        return currentThreshold.GetMinRequiredQuestions(totalQuestions);
+    }
 }

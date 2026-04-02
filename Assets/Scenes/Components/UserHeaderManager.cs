@@ -811,8 +811,9 @@ public class UserHeaderManager : BarsManager
         if (AppContext.PlayerLevel == null) return;
 
         int currentLevel = AppContext.PlayerLevel.GetCurrentLevel();
-        int questionsAnswered = AppContext.PlayerLevel.GetTotalValidAnswered();
+        int questionsAnswered  = AppContext.PlayerLevel.GetTotalValidAnswered();
         int questionsUntilNext = AppContext.PlayerLevel.GetQuestionsUntilNextLevel();
+        int questionsAtStart = AppContext.PlayerLevel.GetQuestionsAtLevelStart();
 
         if (playerLevelText != null)
             playerLevelText.text = currentLevel.ToString();
@@ -836,35 +837,45 @@ public class UserHeaderManager : BarsManager
         }
         else
         {
-            int nextLevelTotal = questionsAnswered + questionsUntilNext;
             int nextLevel = currentLevel + 1;
+            int progressInLevel = questionsAnswered - questionsAtStart;
+            int intervalSize = questionsUntilNext + progressInLevel;
+
+            if (intervalSize <= 0 || progressInLevel < 0)
+            {
+                Debug.LogWarning($"[UserHeaderManager] Dados inconsistentes: " +
+                                $"answered={questionsAnswered}, start={questionsAtStart}, " +
+                                $"untilNext={questionsUntilNext}, interval={intervalSize}. " +
+                                $"Aguardando dados consistentes...");
+                return;
+            }
 
             if (playerLevelProgressBarManager != null)
             {
                 playerLevelProgressBarManager.ApplyLevelGradient(currentLevel);
                 playerLevelProgressBarManager.UpdateProgress(
-                    questionsAnswered,
-                    nextLevelTotal,
+                    progressInLevel,
+                    intervalSize,
                     $"Level {currentLevel}"
                 );
-                Debug.Log($"[UserHeaderManager] Barra animada: {questionsAnswered}/{nextLevelTotal}");
+                Debug.Log($"[UserHeaderManager] Barra: {progressInLevel}/{intervalSize} " +
+                        $"(answered={questionsAnswered}, start={questionsAtStart})");
             }
 
             if (playerLevelProgressText != null)
             {
-                float percentageDone = (questionsAnswered / (float)nextLevelTotal) * 100f;
-                float percentageLeft = 100f - percentageDone;
-                int roundedPercentage = Mathf.RoundToInt(percentageLeft);
+                float percentageLeft = intervalSize > 0 
+                    ? (questionsUntilNext / (float)intervalSize) * 100f 
+                    : 0f;
+                int   roundedPercentage = Mathf.RoundToInt(percentageLeft);
 
-                Debug.Log($"[UserHeaderManager] questionsAnswered={questionsAnswered}, " +
-                        $"nextLevelTotal={nextLevelTotal}, " +
-                        $"percentageDone={percentageDone:F1}%, " +
-                        $"percentageLeft={percentageLeft:F1}%");
-                
                 Debug.Log($"[UserHeaderManager] currentLevel={currentLevel}, " +
                         $"questionsAnswered={questionsAnswered}, " +
+                        $"questionsAtStart={questionsAtStart}, " +
+                        $"progressInLevel={progressInLevel}, " +
+                        $"intervalSize={intervalSize}, " +
                         $"questionsUntilNext={questionsUntilNext}, " +
-                        $"nextLevelTotal={nextLevelTotal}");
+                        $"percentageLeft={percentageLeft:F1}%");
 
                 playerLevelProgressText.text = $"{roundedPercentage}% para o Level {nextLevel}";
             }
