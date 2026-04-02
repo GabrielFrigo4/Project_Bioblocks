@@ -1218,23 +1218,9 @@ public class EnzymeQuestionDatabase : MonoBehaviour, IQuestionDatabase
         }
     };
     
-    public List<Question> GetQuestions()
-    {
-        return questions;
-    }
-
-    public QuestionSet GetQuestionSetType()
-    {
-        return QuestionSet.enzymes;
-    }
-
-    public string GetDatabankName()
-    {
-        return "EnzymeQuestionDatabase";
-    }
-
-    public bool IsDatabaseInDevelopment()
-    {
-        return databaseInDevelopment;
-    }
+    public List<Question> GetQuestions() => questions;
+    public QuestionSet GetQuestionSetType() => QuestionSet.enzymes;
+    public string GetDatabankName()  => "EnzymeQuestionDatabase";
+    public string GetDisplayName()   => "Enzimas";
+    public bool IsDatabaseInDevelopment() => databaseInDevelopment;
 }

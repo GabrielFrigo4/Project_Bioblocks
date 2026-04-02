@@ -11,12 +11,14 @@ public class QuestionScoreManager : MonoBehaviour
     private IAuthRepository _auth;
     private IFirestoreRepository _firestore;
     private UserHeaderManager _userHeaderManager;
+    private IPlayerLevelService _playerLevel;
 
     private void Start()
     {
         _auth      = AppContext.Auth;
         _firestore = AppContext.Firestore;
         _userHeaderManager = FindFirstObjectByType<UserHeaderManager>();
+        _playerLevel = AppContext.PlayerLevel;
         currentUserData = UserDataStore.CurrentUserData;
         questionBonusManager = FindFirstObjectByType<QuestionBonusManager>();
 
@@ -31,84 +33,63 @@ public class QuestionScoreManager : MonoBehaviour
         }
     }
 
-    
     public async Task UpdateScore(int scoreChange, bool isCorrect, Question answeredQuestion, IQuestionDatabase database = null)
     {
         try
-        {
-            if (!_auth.IsUserLoggedIn())
+        {           if (!_auth.IsUserLoggedIn())
             {
                 Debug.LogError("Usuário não autenticado");
                 return;
             }
-    
+
             string userId = _auth.CurrentUserId;
-            UserData userData = await _firestore.GetUserData(userId);
-    
+            UserData userData = UserDataStore.CurrentUserData;
+
             if (userData == null)
             {
-                Debug.LogError("Dados do usuário não encontrados");
+                Debug.LogError("CurrentUserData é null");
                 return;
             }
-    
+
             int actualScoreChange = scoreChange;
-    
+
             if (isCorrect && _userHeaderManager != null && _userHeaderManager.IsAnyBonusActive())
-            {
                 actualScoreChange = _userHeaderManager.ApplyTotalBonus(scoreChange);
-            }
             else if (isCorrect && questionBonusManager != null && questionBonusManager.IsBonusActive())
-            {
                 actualScoreChange = questionBonusManager.ApplyBonusToScore(scoreChange);
-            }
 
             actualScoreChange = ClampScoreChange(userData.Score, actualScoreChange);
-    
+
             if (isCorrect)
             {
-                string databankName = answeredQuestion.questionDatabankName;
-                int questionNumber = answeredQuestion.questionNumber;
-    
+                string databankName  = answeredQuestion.questionDatabankName;
+                int    questionNumber = answeredQuestion.questionNumber;
+
                 try
                 {
                     if (database != null && database.IsDatabaseInDevelopment())
                     {
-                        await AppContext.AnsweredQuestions.MarkQuestionAsAnswered(
-                            answeredQuestion.questionDatabankName, 
-                            questionNumber
-                        );
+                        await AppContext.AnsweredQuestions.MarkQuestionAsAnswered(databankName, questionNumber);
                     }
                     else
                     {
-                        await _firestore.UpdateUserScores(
-                            userId,
-                            actualScoreChange,
-                            questionNumber,
-                            databankName,
-                            true
-                        );
-    
+                        await _firestore.UpdateUserScores(userId, actualScoreChange, questionNumber, databankName, true);
+
                         if (answeredQuestionsManager != null && answeredQuestionsManager.IsManagerInitialized)
-                        {
                             await answeredQuestionsManager.ForceUpdate();
-                        }
-    
+
                         bool isDatabankReset = UserDataStore.IsDatabankReset(databankName);
-    
-                        if (!isDatabankReset && PlayerLevelManager.Instance != null)
+
+                        if (_playerLevel != null)
                         {
-                            await PlayerLevelManager.Instance.IncrementTotalAnswered();
-                            await PlayerLevelManager.Instance.CheckAndHandleLevelUp();
-                        }
-                        else if (isDatabankReset)
-                        {
-                            Debug.Log($"[QuestionScoreManager] Banco {databankName} foi resetado. Questão não conta para level.");
+                            await _playerLevel.IncrementTotalAnswered();
+                            await _playerLevel.CheckAndHandleLevelUp();
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Falha ao atualizar scores e marcar questão como respondida: {ex.Message}");
+                    Debug.LogError($"Falha ao atualizar scores: {ex.Message}");
                 }
             }
             else
@@ -116,48 +97,28 @@ public class QuestionScoreManager : MonoBehaviour
                 try
                 {
                     if (database == null || !database.IsDatabaseInDevelopment())
-                    {
-                        await _firestore.UpdateUserScores(
-                            userId,
-                            actualScoreChange,
-                            0,
-                            "",
-                            false
-                        );
-                    }
+                        await _firestore.UpdateUserScores(userId, actualScoreChange, 0, "", false);
                     else
-                    {
-                        Debug.Log($"[QuestionScoreManager] Modo DEV - Score negativo NÃO salvo no Firebase");
-                    }
+                        Debug.Log("[QuestionScoreManager] Modo DEV - Score negativo NÃO salvo no Firebase");
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Falha ao atualizar o score no Firestore: {ex.Message}");
-                }
-            }
-    
-            if (database == null || !database.IsDatabaseInDevelopment())
-            {
-                UserData updatedUserData = await _firestore.GetUserData(userId);
-    
-                if (updatedUserData != null)
-                {
-                    UserDataStore.CurrentUserData = updatedUserData;
+                    Debug.LogError($"Falha ao atualizar score negativo: {ex.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
             Debug.LogError($"Erro ao atualizar score: {ex.Message}\n{ex.StackTrace}");
-    
-            if (currentUserData != null && scoreChange != 0)
+
+            if (UserDataStore.CurrentUserData != null && scoreChange != 0)
             {
-                int clientSideScore = Mathf.Max(0, currentUserData.Score + scoreChange);
-                int clientSideWeekScore = Mathf.Max(0, currentUserData.WeekScore + scoreChange);
-    
-                currentUserData.Score = clientSideScore;
-                currentUserData.WeekScore = clientSideWeekScore;
-                UserDataStore.CurrentUserData = currentUserData;
+                int clientSideScore     = Mathf.Max(0, UserDataStore.CurrentUserData.Score + scoreChange);
+                int clientSideWeekScore = Mathf.Max(0, UserDataStore.CurrentUserData.WeekScore + scoreChange);
+
+                UserDataStore.CurrentUserData.Score     = clientSideScore;
+                UserDataStore.CurrentUserData.WeekScore = clientSideWeekScore;
+                UserDataStore.CurrentUserData = UserDataStore.CurrentUserData;
             }
         }
     }

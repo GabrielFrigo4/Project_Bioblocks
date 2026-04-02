@@ -98,17 +98,4 @@ public class RankingRepository : IRankingRepository
             throw;
         }
     }
-
-    public async Task ResetAllWeeklyScoresAsync()
-    {
-        try
-        {
-            await AppContext.Firestore.ResetAllWeeklyScores();
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Erro ao resetar scores semanais: {e}");
-            throw;
-        }
-    }
 }

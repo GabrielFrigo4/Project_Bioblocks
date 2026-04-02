@@ -132,13 +132,6 @@ public class FakeFirestoreRepository : IFirestoreRepository
         return Task.CompletedTask;
     }
 
-    public Task ResetAllWeeklyScores()
-    {
-        foreach (var user in _users.Values)
-            user.WeekScore = 0;
-        return Task.CompletedTask;
-    }
-
     public Task EnsureWeekScoreField() => Task.CompletedTask;
 
     public Task DeleteDocument(string collection, string documentId)
@@ -170,5 +163,10 @@ public class FakeFirestoreRepository : IFirestoreRepository
         onScoreChanged?.Invoke(user.Score);
         onWeekScoreChanged?.Invoke(user.WeekScore);
         onAnsweredQuestionsChanged?.Invoke(user.AnsweredQuestions);
+    }
+
+    public void StopListening()
+    {
+        // Em testes, não faz nada
     }
 }

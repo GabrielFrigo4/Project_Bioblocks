@@ -24,7 +24,6 @@ public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
     // -------------------------------------------------------
     // Ciclo de vida
     // -------------------------------------------------------
-
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
@@ -32,27 +31,61 @@ public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
 
     private async void Start()
     {
+        if (!AppContext.IsReady)
+        {
+            Debug.Log("[AnsweredQuestionsManager] Aguardando AppContext...");
+            float elapsed = 0f;
+            while (!AppContext.IsReady && elapsed < 15f)
+            {
+                await Task.Delay(100);
+                elapsed += 0.1f;
+            }
+
+            if (!AppContext.IsReady)
+            {
+                Debug.LogError("[AnsweredQuestionsManager] Timeout aguardando AppContext.");
+                return;
+            }
+        }
+
         _firestore = AppContext.Firestore;
         _auth      = AppContext.Auth;
+
+        if (_firestore == null || _auth == null)
+        {
+            Debug.LogError("[AnsweredQuestionsManager] Serviços não disponíveis após AppContext.IsReady");
+            return;
+        }
 
         await Initialize();
     }
 
-
     // -------------------------------------------------------
     // Inicialização
     // -------------------------------------------------------
-
     private async Task Initialize()
     {
         if (isInitialized) return;
+
         try
         {
             await Task.Yield();
 
+            if (_firestore == null)
+            {
+                Debug.LogError("[AnsweredQuestionsManager] _firestore é null");
+                return;
+            }
+
             if (!_firestore.IsInitialized)
             {
                 Debug.LogError("[AnsweredQuestionsManager] FirestoreRepository não está inicializado");
+                return;
+            }
+
+            if (_auth == null)
+            {
+                Debug.LogError("[AnsweredQuestionsManager] _auth é null");
                 return;
             }
 
@@ -86,7 +119,6 @@ public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
     // -------------------------------------------------------
     // Listener de atualizações em tempo real
     // -------------------------------------------------------
-
     private void HandleAnsweredQuestionsUpdate(Dictionary<string, List<int>> answeredQuestions)
     {
         try
@@ -125,7 +157,6 @@ public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
     // -------------------------------------------------------
     // Busca de dados
     // -------------------------------------------------------
-
     private async Task FetchUserAnsweredQuestions()
     {
         try
@@ -205,7 +236,6 @@ public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
     // -------------------------------------------------------
     // Marcar questão como respondida corretamente
     // -------------------------------------------------------
-
     public async Task MarkQuestionAsAnswered(string databankName, int questionNumber)
     {
         try
@@ -257,7 +287,6 @@ public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
     // -------------------------------------------------------
     // Força atualização
     // -------------------------------------------------------
-
     public async Task ForceUpdate()
     {
         try
@@ -293,7 +322,6 @@ public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
     // -------------------------------------------------------
     // Questões restantes
     // -------------------------------------------------------
-
     public async Task<bool> HasRemainingQuestions(string currentDatabase, List<string> currentQuestionList)
     {
         try
@@ -328,7 +356,6 @@ public class AnsweredQuestionsManager : MonoBehaviour, IAnsweredQuestionsManager
     // -------------------------------------------------------
     // Reset
     // -------------------------------------------------------
-
     public void ResetManager()
     {
         isInitialized = false;

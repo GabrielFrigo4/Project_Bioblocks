@@ -9,6 +9,7 @@ namespace QuestionSystem
         List<Question> GetQuestions();
         QuestionSet GetQuestionSetType();
         string GetDatabankName();
+        string GetDisplayName();
     }
 }
 

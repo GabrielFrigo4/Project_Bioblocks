@@ -1380,23 +1380,9 @@ public class LipidsQuestionDatabase : MonoBehaviour, IQuestionDatabase
         }
     };
 
-    public List<Question> GetQuestions()
-    {
-        return questions;
-    }
-
-    public QuestionSet GetQuestionSetType()
-    {
-        return QuestionSet.lipids;
-    }
-
-    public string GetDatabankName()
-    {
-        return "LipidsQuestionDatabase";
-    }
-
-    public bool IsDatabaseInDevelopment()
-    {
-        return databaseInDevelopment;
-    }
+    public List<Question> GetQuestions() => questions;
+    public QuestionSet GetQuestionSetType() => QuestionSet.lipids;
+    public string GetDatabankName()  => "LipidsQuestionDatabase";
+    public string GetDisplayName()   => "Lipídeos";
+    public bool IsDatabaseInDevelopment() => databaseInDevelopment;
 }

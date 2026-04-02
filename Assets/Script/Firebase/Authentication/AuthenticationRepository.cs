@@ -137,6 +137,7 @@ public class AuthenticationRepository : MonoBehaviour, IAuthRepository
         try
         {
             if (!isInitialized) throw new Exception("Firebase não inicializado");
+            AppContext.Firestore?.StopListening();
             _auth.SignOut();
             UserDataStore.CurrentUserData = null;
             await Task.CompletedTask;

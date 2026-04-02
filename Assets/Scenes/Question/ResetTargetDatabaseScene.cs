@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using QuestionSystem;
+using System.Linq;
 
 public class ResetTargetDatabaseScene : MonoBehaviour
 {
@@ -74,31 +75,27 @@ public class ResetTargetDatabaseScene : MonoBehaviour
             return;
         }
 
-        Dictionary<string, string> databankNameMap = new Dictionary<string, string>()
-        {
-            {"AcidBaseBufferQuestionDatabase", "Ácidos, bases e tampões"},
-            {"AminoacidQuestionDatabase", "Aminoácidos e peptídeos"},
-            {"BiochemistryIntroductionQuestionDatabase", "Introdução à Bioquímica"},
-            {"CarbohydratesQuestionDatabase", "Carboidratos"},
-            {"EnzymeQuestionDatabase", "Enzimas"},
-            {"LipidsQuestionDatabase", "Lipídeos"},
-            {"MembranesQuestionDatabase", "Mambranas Biológicas"},
-            {"NucleicAcidsQuestionDatabase", "Ácidos nucleicos"},
-            {"ProteinQuestionDatabase", "Proteínas"},
-            {"WaterQuestionDatabase", "Água"}
-        };
+        IQuestionDatabase database = FindDatabaseByName(databankName);                                                                                              
+        string displayName = database != null
+        ? database.GetDisplayName()
+        : databankName; // fallback para o nome técnico
 
-        string displayName;
-        bool found = databankNameMap.TryGetValue(databankName, out displayName);
+        databankNameText.text = $"Tópico: {displayName}";
+    }
 
-        if (found)
+    private IQuestionDatabase FindDatabaseByName(string name)
+    {
+        // Busca entre todos os bancos registrados na cena
+        var databases = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
+            .OfType<IQuestionDatabase>();
+
+        foreach (var db in databases)
         {
-            databankNameText.text = $"Tópico: {displayName}";
+            if (db.GetDatabankName() == name)
+                return db;
         }
-        else
-        {
-            databankNameText.text = $"Tópico: {databankName}";
-        }
+
+        return null;
     }
 
     public async void ResetAnsweredQuestions()
@@ -119,8 +116,8 @@ public class ResetTargetDatabaseScene : MonoBehaviour
 
             try
             {
-                if (PlayerLevelManager.Instance != null)
-                    await PlayerLevelManager.Instance.RecalculateTotalAnswered();
+              if (AppContext.PlayerLevel != null)
+                await AppContext.PlayerLevel.RecalculateTotalAnswered();   
             }
             catch (Exception e)
             {
