@@ -30,8 +30,7 @@ public class UserHeaderManager : BarsManager
     [SerializeField] private TextMeshProUGUI playerLevelProgressText;
     [SerializeField] private ProgressBarManager playerLevelProgressBarManager;
 
-    [Header("Level Colors (opcional)")]
-    [SerializeField] private Color[] levelColors = new Color[]
+    public static readonly Color[] LevelColors = new Color[]
     {
         HexToColor("#B000FF"),  // Level 1 - Roxo claro
         HexToColor("#FF0097"),  // Level 2 - Azul ciano vibrante
@@ -811,17 +810,17 @@ public class UserHeaderManager : BarsManager
     {
         if (AppContext.PlayerLevel == null) return;
 
-        int currentLevel       = AppContext.PlayerLevel.GetCurrentLevel();
-        int questionsAnswered  = AppContext.PlayerLevel.GetTotalValidAnswered();
+        int currentLevel = AppContext.PlayerLevel.GetCurrentLevel();
+        int questionsAnswered = AppContext.PlayerLevel.GetTotalValidAnswered();
         int questionsUntilNext = AppContext.PlayerLevel.GetQuestionsUntilNextLevel();
 
         if (playerLevelText != null)
             playerLevelText.text = currentLevel.ToString();
 
-        if (playerLevelBackground != null && levelColors != null && levelColors.Length >= 10)
+        if (playerLevelBackground != null)
         {
             int colorIndex = Mathf.Clamp(currentLevel - 1, 0, 9);
-            playerLevelBackground.color = levelColors[colorIndex];
+            playerLevelBackground.color = LevelColors[colorIndex];
         }
 
         if (currentLevel >= 10)
@@ -838,10 +837,11 @@ public class UserHeaderManager : BarsManager
         else
         {
             int nextLevelTotal = questionsAnswered + questionsUntilNext;
-            int nextLevel      = currentLevel + 1;
+            int nextLevel = currentLevel + 1;
 
             if (playerLevelProgressBarManager != null)
             {
+                playerLevelProgressBarManager.ApplyLevelGradient(currentLevel);
                 playerLevelProgressBarManager.UpdateProgress(
                     questionsAnswered,
                     nextLevelTotal,
@@ -852,8 +852,20 @@ public class UserHeaderManager : BarsManager
 
             if (playerLevelProgressText != null)
             {
-                float percentageToNext  = (questionsUntilNext / (float)nextLevelTotal) * 100f;
-                int   roundedPercentage = Mathf.RoundToInt(percentageToNext);
+                float percentageDone = (questionsAnswered / (float)nextLevelTotal) * 100f;
+                float percentageLeft = 100f - percentageDone;
+                int roundedPercentage = Mathf.RoundToInt(percentageLeft);
+
+                Debug.Log($"[UserHeaderManager] questionsAnswered={questionsAnswered}, " +
+                        $"nextLevelTotal={nextLevelTotal}, " +
+                        $"percentageDone={percentageDone:F1}%, " +
+                        $"percentageLeft={percentageLeft:F1}%");
+                
+                Debug.Log($"[UserHeaderManager] currentLevel={currentLevel}, " +
+                        $"questionsAnswered={questionsAnswered}, " +
+                        $"questionsUntilNext={questionsUntilNext}, " +
+                        $"nextLevelTotal={nextLevelTotal}");
+
                 playerLevelProgressText.text = $"{roundedPercentage}% para o Level {nextLevel}";
             }
         }
