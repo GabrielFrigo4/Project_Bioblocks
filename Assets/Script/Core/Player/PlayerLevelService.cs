@@ -232,11 +232,11 @@ public class PlayerLevelService : MonoBehaviour, IPlayerLevelService
         if (_currentUserData.PlayerLevel >= 10) return 0;
 
         int totalQuestions = GetTotalQuestionsCount();
-        int nextLevel      = _currentUserData.PlayerLevel + 1;
-        var nextThreshold  = PlayerLevelConfig.GetThresholdForLevel(nextLevel);
+        int nextLevel = _currentUserData.PlayerLevel + 1;
+        var nextThreshold = PlayerLevelConfig.GetThresholdForLevel(nextLevel);
 
-        int questionsNeeded = nextThreshold.GetRequiredQuestions(totalQuestions);
-        int remaining       = questionsNeeded - _currentUserData.TotalValidQuestionsAnswered;
+        int questionsNeeded = nextThreshold.GetMinRequiredQuestions(totalQuestions);
+        int remaining = questionsNeeded - _currentUserData.TotalValidQuestionsAnswered;
 
         return Mathf.Max(0, remaining);
     }
