@@ -30,8 +30,7 @@ public class UserHeaderManager : BarsManager
     [SerializeField] private TextMeshProUGUI playerLevelProgressText;
     [SerializeField] private ProgressBarManager playerLevelProgressBarManager;
 
-    [Header("Level Colors (opcional)")]
-    [SerializeField] private Color[] levelColors = new Color[]
+    public static readonly Color[] LevelColors = new Color[]
     {
         HexToColor("#B000FF"),  // Level 1 - Roxo claro
         HexToColor("#FF0097"),  // Level 2 - Azul ciano vibrante
@@ -818,10 +817,10 @@ public class UserHeaderManager : BarsManager
         if (playerLevelText != null)
             playerLevelText.text = currentLevel.ToString();
 
-        if (playerLevelBackground != null && levelColors != null && levelColors.Length >= 10)
+        if (playerLevelBackground != null)
         {
             int colorIndex = Mathf.Clamp(currentLevel - 1, 0, 9);
-            playerLevelBackground.color = levelColors[colorIndex];
+            playerLevelBackground.color = LevelColors[colorIndex];
         }
 
         if (currentLevel >= 10)
@@ -842,6 +841,7 @@ public class UserHeaderManager : BarsManager
 
             if (playerLevelProgressBarManager != null)
             {
+                playerLevelProgressBarManager.ApplyLevelGradient(currentLevel);
                 playerLevelProgressBarManager.UpdateProgress(
                     questionsAnswered,
                     nextLevelTotal,
