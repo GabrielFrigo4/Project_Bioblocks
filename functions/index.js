@@ -1,7 +1,7 @@
-const { onRequest }       = require("firebase-functions/v2/https");
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const { onSchedule }      = require("firebase-functions/v2/scheduler");
-const admin               = require("firebase-admin");
+const {onRequest} = require("firebase-functions/v2/https");
+const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+const {onSchedule} = require("firebase-functions/v2/scheduler");
+const admin = require("firebase-admin");
 
 admin.initializeApp();
 
@@ -14,38 +14,38 @@ admin.initializeApp();
 // são copiados para esta coleção.
 // ─────────────────────────────────────────────────────────────
 exports.syncRankingOnUserWrite = onDocumentWritten(
-  "Users/{userId}",
-  async (event) => {
-    const userId = event.params.userId;
+    "Users/{userId}",
+    async (event) => {
+      const userId = event.params.userId;
 
-    // Documento deletado → remove entrada do ranking
-    if (!event.data.after.exists) {
+      // Documento deletado → remove entrada do ranking
+      if (!event.data.after.exists) {
+        await admin.firestore()
+            .collection("Rankings")
+            .doc(userId)
+            .delete();
+        console.log(`[syncRanking] Entrada removida para userId: ${userId}`);
+        return;
+      }
+
+      const data = event.data.after.data();
+
+      // Copia apenas os campos públicos necessários para o ranking
+      const rankingEntry = {
+        nickName: data.NickName ?? "",
+        score: data.Score ?? 0,
+        weekScore: data.WeekScore ?? 0,
+        profileImageUrl: data.ProfileImageUrl ?? "",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
       await admin.firestore()
-        .collection("Rankings")
-        .doc(userId)
-        .delete();
-      console.log(`[syncRanking] Entrada removida para userId: ${userId}`);
-      return;
-    }
+          .collection("Rankings")
+          .doc(userId)
+          .set(rankingEntry, {merge: true});
 
-    const data = event.data.after.data();
-
-    // Copia apenas os campos públicos necessários para o ranking
-    const rankingEntry = {
-      nickName:        data.NickName        ?? "",
-      score:           data.Score           ?? 0,
-      weekScore:       data.WeekScore       ?? 0,
-      profileImageUrl: data.ProfileImageUrl ?? "",
-      updatedAt:       admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    await admin.firestore()
-      .collection("Rankings")
-      .doc(userId)
-      .set(rankingEntry, { merge: true });
-
-    console.log(`[syncRanking] Rankings/${userId} atualizado — score: ${rankingEntry.score}`);
-  }
+      console.log(`[syncRanking] Rankings/${userId} atualizado — score: ${rankingEntry.score}`);
+    },
 );
 
 // ─────────────────────────────────────────────────────────────
@@ -53,27 +53,27 @@ exports.syncRankingOnUserWrite = onDocumentWritten(
 // Tlmente automático.
 // ─────────────────────────────────────────────────────────────
 exports.resetWeeklyScores = onSchedule(
-  {
-    schedule:  "0 3 * * 1",   // 03:00 UTC = 00:00 Brasília (segunda)
-    timeZone:  "UTC",
-    timeoutSeconds: 300,
-  },
-  async () => {
-    const db       = admin.firestore();
-    const BATCH_MAX = 450; // limite seguro por batch
+    {
+      schedule: "0 3 * * 1", // 03:00 UTC = 00:00 Brasília (segunda)
+      timeZone: "UTC",
+      timeoutSeconds: 300,
+    },
+    async () => {
+      const db = admin.firestore();
+      const BATCH_MAX = 450; // limite seguro por batch
 
-    // Reseta Users
-    const usersSnap = await db.collection("Users").get();
-    await _batchUpdate(db, usersSnap.docs, { WeekScore: 0 }, BATCH_MAX);
+      // Reseta Users
+      const usersSnap = await db.collection("Users").get();
+      await _batchUpdate(db, usersSnap.docs, {WeekScore: 0}, BATCH_MAX);
 
-    // Reseta Rankings (espelho)
-    const rankSnap = await db.collection("Rankings").get();
-    await _batchUpdate(db, rankSnap.docs, { weekScore: 0 }, BATCH_MAX);
+      // Reseta Rankings (espelho)
+      const rankSnap = await db.collection("Rankings").get();
+      await _batchUpdate(db, rankSnap.docs, {weekScore: 0}, BATCH_MAX);
 
-    console.log(
-      `[resetWeekly] WeekScore zerado — ${usersSnap.size} usuários, ${rankSnap.size} rankings.`
-    );
-  }
+      console.log(
+          `[resetWeekly] WeekScore zerado — ${usersSnap.size} usuários, ${rankSnap.size} rankings.`,
+      );
+    },
 );
 
 // ─────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ exports.resetWeeklyScoresManual = onRequest(async (req, res) => {
   }
 
   try {
-    const db        = admin.firestore();
+    const db = admin.firestore();
     const BATCH_MAX = 450;
 
     const [usersSnap, rankSnap] = await Promise.all([
@@ -101,8 +101,8 @@ exports.resetWeeklyScoresManual = onRequest(async (req, res) => {
     ]);
 
     await Promise.all([
-      _batchUpdate(db, usersSnap.docs, { WeekScore: 0 }, BATCH_MAX),
-      _batchUpdate(db, rankSnap.docs,  { weekScore: 0 }, BATCH_MAX),
+      _batchUpdate(db, usersSnap.docs, {WeekScore: 0}, BATCH_MAX),
+      _batchUpdate(db, rankSnap.docs, {weekScore: 0}, BATCH_MAX),
     ]);
 
     const msg = `Reset manual concluído — ${usersSnap.size} usuários.`;
@@ -136,76 +136,3 @@ async function _batchUpdate(db, docs, fields, batchMax) {
     await batch.commit();
   }
 }
-
-// Adicionar temporariamente em functions/index.js
-// Após executar: remover e fazer novo deploy
-
-exports.populateRankingsFromUsers = onRequest(async (req, res) => {
-  const secretKey = process.env.RESET_SECRET_KEY;
-
-  if (!secretKey) {
-    res.status(500).send("RESET_SECRET_KEY não configurada.");
-    return;
-  }
-  if (req.query.key !== secretKey) {
-    res.status(403).send("Acesso não autorizado.");
-    return;
-  }
-
-  try {
-    const db        = admin.firestore();
-    const BATCH_MAX = 450;
-
-    const usersSnap = await db.collection("Users").get();
-
-    if (usersSnap.empty) {
-      res.status(200).send("Nenhum usuário encontrado.");
-      return;
-    }
-
-    let batch     = db.batch();
-    let count     = 0;
-    let total     = 0;
-    let skipped   = 0;
-
-    for (const doc of usersSnap.docs) {
-      const d = doc.data();
-
-      // Pula documentos sem NickName — provavelmente incompletos
-      if (!d.NickName) {
-        skipped++;
-        continue;
-      }
-
-      batch.set(
-        db.collection("Rankings").doc(doc.id),
-        {
-          nickName:        d.NickName        ?? "",
-          score:           d.Score           ?? 0,
-          weekScore:       d.WeekScore       ?? 0,
-          profileImageUrl: d.ProfileImageUrl ?? "",
-          updatedAt:       admin.firestore.FieldValue.serverTimestamp(),
-        }
-      );
-
-      count++;
-      total++;
-
-      if (count >= BATCH_MAX) {
-        await batch.commit();
-        batch = db.batch();
-        count = 0;
-      }
-    }
-
-    if (count > 0) await batch.commit();
-
-    const msg = `Rankings populado: ${total} entradas criadas, ${skipped} ignoradas.`;
-    console.log(`[populateRankings] ${msg}`);
-    res.status(200).send(msg);
-
-  } catch (err) {
-    console.error("[populateRankings] Erro:", err);
-    res.status(500).send(`Erro: ${err.message}`);
-  }
-});
