@@ -1,101 +1,110 @@
-using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq;
+using Firebase.Firestore;
+using UnityEngine;
 
 public class RankingRepository : IRankingRepository
 {
-    private IAuthRepository _auth      => AppContext.Auth;
-    private IFirestoreRepository _firestore => AppContext.Firestore;
+    private FirebaseFirestore _db   => FirebaseFirestore.DefaultInstance;
+    private IAuthRepository   _auth => AppContext.Auth;
 
-    public async Task<UserData> GetCurrentUserDataAsync()
+    // ─────────────────────────────────────────────────────────
+    // IRankingRepository
+    // ─────────────────────────────────────────────────────────
+    public async Task<Ranking> GetCurrentUserRankingAsync()
     {
-        if (!AppContext.Auth.IsUserLoggedIn())
+        if (!_auth.IsUserLoggedIn())
         {
-            Debug.LogError("Usuário não está autenticado");
+            Debug.LogError("[RankingRepository] Usuário não autenticado.");
             return null;
         }
 
-        string userId = AppContext.Auth.CurrentUserId;
-        return await AppContext.Firestore.GetUserData(userId);
-        
-    }
+        string userId = _auth.CurrentUserId;
 
-    public async Task<List<Ranking>> GetRankingsAsync()
-    {
         try
         {
-            var usersData = await GetAllUsersData();
+            DocumentSnapshot snap = await _db
+                .Collection("Rankings")
+                .Document(userId)
+                .GetSnapshotAsync();
 
-            List<Ranking> rankings = usersData.Select(userData => new Ranking(
-                userData.NickName,
-                userData.Score,
-                userData.WeekScore,
-                userData.ProfileImageUrl ?? ""
-            )).ToList();
-
-            // Log para depuração
-            Debug.Log($"GetRankingsAsync - Amostra de rankings:");
-            for (int i = 0; i < Math.Min(3, rankings.Count); i++)
+            if (!snap.Exists)
             {
-                Debug.Log($"Usuário: {rankings[i].userName}, Score: {rankings[i].userScore}, WeekScore: {rankings[i].userWeekScore}");
+                Debug.LogWarning($"[RankingRepository] Rankings/{userId} não encontrado.");
+                return null;
             }
 
-            return rankings;
+            Ranking ranking = snap.ConvertTo<Ranking>();
+            ranking.UserId  = userId;
+            return ranking;
         }
         catch (Exception e)
         {
-            Debug.LogError($"Erro ao buscar rankings: {e.Message}");
+            Debug.LogError($"[RankingRepository] GetCurrentUserRanking falhou: {e.Message}");
             throw;
         }
     }
 
-    public async Task<List<Ranking>> GetWeekRankingsAsync()
+    public async Task<List<Ranking>> GetRankingsAsync(int limit = 50)
     {
         try
         {
-            var usersData = await GetAllUsersData();
+            QuerySnapshot snap = await _db
+                .Collection("Rankings")
+                .OrderByDescending("score")
+                .Limit(limit)
+                .GetSnapshotAsync();
 
-            List<Ranking> rankings = usersData.Select(userData => new Ranking(
-                userData.NickName,
-                userData.Score,
-                userData.WeekScore,
-                userData.ProfileImageUrl ?? ""
-            )).ToList();
-
-            return rankings;
+            return ToRankingList(snap);
         }
         catch (Exception e)
         {
-            Debug.LogError($"Erro ao buscar rankings semanais: {e.Message}");
+            Debug.LogError($"[RankingRepository] GetRankingsAsync falhou: {e.Message}");
             throw;
         }
     }
 
-    public async Task<List<UserData>> GetAllUsersData()
+    public async Task<List<Ranking>> GetWeekRankingsAsync(int limit = 50)
     {
         try
         {
-            return await AppContext.Firestore.GetAllUsersData();
+            QuerySnapshot snap = await _db
+                .Collection("Rankings")
+                .OrderByDescending("weekScore")
+                .Limit(limit)
+                .GetSnapshotAsync();
+
+            return ToRankingList(snap);
         }
         catch (Exception e)
         {
-            Debug.LogError($"Erro ao buscar dados dos usuários: {e.Message}");
+            Debug.LogError($"[RankingRepository] GetWeekRankingsAsync falhou: {e.Message}");
             throw;
         }
     }
 
-    public async Task UpdateUserWeekScoreAsync(string userId, int additionalScore)
+    // ─────────────────────────────────────────────────────────
+    // Helper
+    // ─────────────────────────────────────────────────────────
+    private List<Ranking> ToRankingList(QuerySnapshot snap)
     {
-        try
+        var result = new List<Ranking>(snap.Count);
+
+        foreach (DocumentSnapshot doc in snap.Documents)
         {
-            await AppContext.Firestore.UpdateUserWeekScore(userId, additionalScore);
+            try
+            {
+                Ranking ranking = doc.ConvertTo<Ranking>();
+                ranking.UserId  = doc.Id;   // chave do documento = userId
+                result.Add(ranking);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[RankingRepository] Doc {doc.Id} inválido, ignorando: {e.Message}");
+            }
         }
-        catch (Exception e)
-        {
-            Debug.LogError($"Erro ao atualizar WeekScore: {e}");
-            throw;
-        }
+
+        return result;
     }
 }
