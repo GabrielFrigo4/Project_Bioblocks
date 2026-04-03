@@ -10,8 +10,6 @@ public class DatabaseStatisticsManager : MonoBehaviour, IStatisticsProvider
     private static DatabaseStatisticsManager instance;
     private bool isInitialized = false;
     private bool isInitializing = false;
-
-    // Evento para notificar quando as estatísticas estiverem prontas
     public delegate void StatisticsReadyHandler();
     public static event StatisticsReadyHandler OnStatisticsReady;
 
