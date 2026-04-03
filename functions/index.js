@@ -1,8 +1,3 @@
-// functions/index.js
-//
-// Cloud Functions para o BioBlocks
-// Requer: firebase-functions v2, firebase-admin
-
 const { onRequest }       = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule }      = require("firebase-functions/v2/scheduler");
@@ -55,7 +50,7 @@ exports.syncRankingOnUserWrite = onDocumentWritten(
 
 // ─────────────────────────────────────────────────────────────
 // SCHEDULE: Reseta WeekScore toda segunda-feira às 00:00 (Brasília)
-// Totalmente automático.
+// Tlmente automático.
 // ─────────────────────────────────────────────────────────────
 exports.resetWeeklyScores = onSchedule(
   {
@@ -82,7 +77,7 @@ exports.resetWeeklyScores = onSchedule(
 );
 
 // ─────────────────────────────────────────────────────────────
-// HTTP: Mantido como fallback manual (usa a chave secreta)
+// HTTP: Mantido como fallback manual (se quiser usar a// Te secreta)
 // ─────────────────────────────────────────────────────────────
 exports.resetWeeklyScoresManual = onRequest(async (req, res) => {
   const secretKey = process.env.RESET_SECRET_KEY;

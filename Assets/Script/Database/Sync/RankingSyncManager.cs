@@ -44,7 +44,7 @@ public class RankingSyncManager : MonoBehaviour
         {
             if (BioBlocksSettings.Instance != null && BioBlocksSettings.Instance.IsDebugMode())
             {
-                _remoteRepo = new MockRankingRepository();
+                _remoteRepo = new FakeRankingRepository();
             }
             else
             {

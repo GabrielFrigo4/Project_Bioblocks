@@ -4,8 +4,7 @@ using Firebase.Firestore;
 [FirestoreData]
 public class Ranking
 {
-    [FirestoreProperty("userId")]
-    public string UserId { get; set; } 
+   public string UserId { get; set; }
 
     [FirestoreProperty("nickName")]
     public string userName { get; set; }
@@ -19,10 +18,22 @@ public class Ranking
     [FirestoreProperty("profileImageUrl")]
     public string profileImageUrl { get; set; }
 
-    // Construtores existentes mantidos para compatibilidade
-    public Ranking(string userName, int userScore, string profileImageUrl) { ... }
-    public Ranking(string userName, int userScore, int userWeekScore, string profileImageUrl) { ... }
-
-    // Construtor vazio necessário para o FirestoreData desserializar
+    // Construtor vazio obrigatório para o FirestoreData desserializar
     public Ranking() { }
+
+    public Ranking(string userId, string userName, int userScore, int userWeekScore, string profileImageUrl)
+    {
+        UserId = userId;
+        this.userName = userName;
+        this.userScore = userScore;
+        this.userWeekScore = userWeekScore;
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    // Mantidos para compatibilidade com código existente
+    public Ranking(string userName, int userScore, string profileImageUrl)
+        : this("", userName, userScore, 0, profileImageUrl) { }
+
+    public Ranking(string userName, int userScore, int userWeekScore, string profileImageUrl)
+        : this("", userName, userScore, userWeekScore, profileImageUrl) { }
 }
