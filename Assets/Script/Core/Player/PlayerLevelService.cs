@@ -14,6 +14,7 @@ public class PlayerLevelService : MonoBehaviour, IPlayerLevelService
     private UserData _currentUserData;
     private bool _isInitialized = false;
     private bool _isMigrating = false;
+    private bool _migrationChecked = false;
 
     // -------------------------------------------------------
     // Ciclo de vida Unity
@@ -27,17 +28,44 @@ public class PlayerLevelService : MonoBehaviour, IPlayerLevelService
     {
         Debug.Log("[PlayerLevelService] Start() chamado");
 
+        if (!AppContext.IsReady)
+        {
+            Debug.LogWarning("[PlayerLevelService] AppContext não está pronto. Aguardando...");
+            AppContext.OnReady += OnAppContextReady;
+            return;
+        }
+
+        InitializeDependencies();
+    }
+
+    private void OnAppContextReady()
+    {
+        AppContext.OnReady -= OnAppContextReady;
+        InitializeDependencies();
+    }
+
+    private void InitializeDependencies()
+    {
         _firestore  = AppContext.Firestore;
         _statistics = AppContext.Statistics;
+
+        if (_firestore == null)
+            Debug.LogError("[PlayerLevelService] _firestore é null");
+
+        if (_statistics == null)
+            Debug.LogWarning("[PlayerLevelService] _statistics é null");
+
+        _migrationChecked = false;
 
         UserDataStore.OnUserDataChanged += OnUserDataChanged;
         _currentUserData = UserDataStore.CurrentUserData;
 
         if (_currentUserData == null)
-            Debug.LogWarning("[PlayerLevelService] CurrentUserData é null no Start(). Aguardando OnUserDataChanged...");
+            Debug.LogWarning("[PlayerLevelService] CurrentUserData é null. Aguardando OnUserDataChanged...");
         else
         {
             Debug.Log($"[PlayerLevelService] CurrentUserData encontrado: {_currentUserData.UserId}, Level: {_currentUserData.PlayerLevel}");
+            _migrationChecked = true;
             PerformMigrationIfNeeded();
         }
 
@@ -48,6 +76,8 @@ public class PlayerLevelService : MonoBehaviour, IPlayerLevelService
     private void OnDestroy()
     {
         UserDataStore.OnUserDataChanged -= OnUserDataChanged;
+        _migrationChecked    = false;
+        _cachedTotalQuestions = 0;
     }
 
     // -------------------------------------------------------
@@ -69,10 +99,21 @@ public class PlayerLevelService : MonoBehaviour, IPlayerLevelService
         _currentUserData = userData;
         _cachedTotalQuestions = 0;
 
-        if (_currentUserData != null && !string.IsNullOrEmpty(_currentUserData.UserId) && _isInitialized && !_isMigrating)
+        if (_currentUserData == null || string.IsNullOrEmpty(_currentUserData.UserId)) return;
+
+        // Migração: roda apenas uma vez por sessão
+        if (_isInitialized && !_isMigrating && !_migrationChecked)
         {
+            _migrationChecked = true;
             Debug.Log("[PlayerLevelService] Dados carregados pela primeira vez. Verificando migração...");
             PerformMigrationIfNeeded();
+        }
+
+        // Progresso de level: dispara sempre que UserData mudar
+        // (score, questões respondidas, etc.)
+        if (_isInitialized)
+        {
+            OnLevelProgressUpdated?.Invoke(_currentUserData.TotalValidQuestionsAnswered);
         }
     }
 
@@ -80,8 +121,6 @@ public class PlayerLevelService : MonoBehaviour, IPlayerLevelService
     // Migração de dados legados
     // -------------------------------------------------------
     // -------------------------------------------------------
-// Migração de dados legados
-// -------------------------------------------------------
     private async void PerformMigrationIfNeeded()
     {
         if (_currentUserData == null) return;
@@ -146,8 +185,7 @@ public class PlayerLevelService : MonoBehaviour, IPlayerLevelService
     // -------------------------------------------------------
     public async Task IncrementTotalAnswered()
     {
-        if (!_isInitialized || _currentUserData == null) return;
-
+        if (!_isInitialized || _currentUserData == null || _firestore == null) return;
         _currentUserData.TotalValidQuestionsAnswered++;
 
         await _firestore.UpdateUserField(
@@ -164,7 +202,7 @@ public class PlayerLevelService : MonoBehaviour, IPlayerLevelService
 
     public async Task CheckAndHandleLevelUp()
     {
-        if (!_isInitialized || _currentUserData == null) return;
+        if (!_isInitialized || _currentUserData == null || _firestore == null) return;
 
         int totalQuestions = GetTotalQuestionsCount();
         int oldLevel       = _currentUserData.PlayerLevel;

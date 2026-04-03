@@ -15,26 +15,52 @@ public class QuestionScoreManager : MonoBehaviour
 
     private void Start()
     {
-        _auth      = AppContext.Auth;
+        if (!AppContext.IsReady)
+        {
+            Debug.LogWarning("[QuestionScoreManager] AppContext não está pronto. Aguardando...");
+            AppContext.OnReady += OnAppContextReady;
+            return;
+        }
+
+        InitializeDependencies();
+    }
+
+    private void OnAppContextReady()
+    {
+        AppContext.OnReady -= OnAppContextReady;
+        InitializeDependencies();
+    }
+
+    private void InitializeDependencies()
+    {
+        _auth = AppContext.Auth;
         _firestore = AppContext.Firestore;
         _userHeaderManager = FindFirstObjectByType<UserHeaderManager>();
         _playerLevel = AppContext.PlayerLevel;
         currentUserData = UserDataStore.CurrentUserData;
         questionBonusManager = FindFirstObjectByType<QuestionBonusManager>();
 
+        if (_auth == null)
+            Debug.LogError("[QuestionScoreManager] _auth é null");
+
+        if (_firestore == null)
+            Debug.LogError("[QuestionScoreManager] _firestore é null");
+
         if (currentUserData == null)
-        {
-            Debug.LogError("CurrentUserData é null no ScoreManager");
-        }
+            Debug.LogError("[QuestionScoreManager] CurrentUserData é null no ScoreManager");
 
         if (questionBonusManager == null)
-        {
-            Debug.LogWarning("QuestionBonusManager não encontrado. O sistema de bônus não estará disponível.");
-        }
+            Debug.LogWarning("[QuestionScoreManager] QuestionBonusManager não encontrado. O sistema de bônus não estará disponível.");
     }
 
     public async Task UpdateScore(int scoreChange, bool isCorrect, Question answeredQuestion, IQuestionDatabase database = null)
     {
+        if (_firestore == null || _auth == null)
+        {
+            Debug.LogError("[QuestionScoreManager] Dependências não inicializadas. Abortando UpdateScore.");
+            return;
+        }
+        
         try
         {           if (!_auth.IsUserLoggedIn())
             {

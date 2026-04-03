@@ -145,8 +145,8 @@ public class AppContext : MonoBehaviour
             storageRepo.InjectDependencies(authRepo);
             imageUploadSvc.InjectDependencies(storageRepo);
 
-            // 5. Injeta DatabaseManager no ImageCacheService
-            imageCacheSvc.InjectDependencies(databaseMgr);
+            // 5. Injeta DatabaseManager no ImageCacheService - usando stub, esperando LiteDB
+            ImageCache = new ImageCacheServiceStub();
 
             // 6. Injeta SceneDataService no NavigationManager
             navigationMgr.InjectDependencies(sceneDataMgr);

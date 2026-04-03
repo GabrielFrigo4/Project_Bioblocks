@@ -504,86 +504,106 @@ public class FirestoreRepository : MonoBehaviour, IFirestoreRepository
         }
     }
 
-   // FirestoreRepository.cs
 
-    public async Task UpdateUserScores(string userId, int additionalScore, int questionNumber, string databankName, bool isCorrect)
+public async Task UpdateUserScores(string userId, int additionalScore, int questionNumber, string databankName, bool isCorrect)
+{
+    try
     {
-        try
+        if (!isInitialized) throw new Exception("Firestore não inicializado");
+
+        DocumentReference docRef = db.Collection("Users").Document(userId);
+        UserData localUserData = UserDataStore.CurrentUserData;
+
+        Debug.Log($"[FirestoreRepository] UpdateUserScores iniciado. userId={userId}, localUserData={localUserData?.UserId ?? "NULL"}");
+
+        await db.RunTransactionAsync(async transaction =>
         {
-            if (!isInitialized) throw new Exception("Firestore não inicializado");
+            Debug.Log("[FirestoreRepository] Dentro da transação - obtendo snapshot...");
+            DocumentSnapshot snapshot = await transaction.GetSnapshotAsync(docRef);
+            Debug.Log($"[FirestoreRepository] Snapshot obtido. Exists={snapshot.Exists}");
 
-            DocumentReference docRef = db.Collection("Users").Document(userId);
-
-            await db.RunTransactionAsync(async transaction =>
+            if (!snapshot.Exists)
             {
-                DocumentSnapshot snapshot = await transaction.GetSnapshotAsync(docRef);
-
-                if (!snapshot.Exists)
-                {
-                    Debug.LogError("[FirestoreRepository] Usuário não encontrado na transação de score.");
-                    return;
-                }
-
-                int currentScore = snapshot.ContainsField("Score")
-                    ? Convert.ToInt32(snapshot.GetValue<object>("Score")) : 0;
-                int currentWeekScore = snapshot.ContainsField("WeekScore")
-                    ? Convert.ToInt32(snapshot.GetValue<object>("WeekScore")) : 0;
-
-                int newScore = currentScore + additionalScore;
-                int newWeekScore = currentWeekScore + additionalScore;
-
-                // Score nunca fica negativo
-                if (newScore < 0) newScore = 0;
-                if (newWeekScore < 0) newWeekScore = 0;
-
-                Dictionary<string, object> updates = new Dictionary<string, object>
-                {
-                    { "Score",     newScore },
-                    { "WeekScore", newWeekScore }
-                };
-
-                // Adiciona questão respondida corretamente
-                if (isCorrect && !string.IsNullOrEmpty(databankName) && questionNumber > 0)
-                {
-                    var answeredQuestions = snapshot.ContainsField("AnsweredQuestions")
-                        ? snapshot.GetValue<Dictionary<string, List<int>>>("AnsweredQuestions")
-                        : new Dictionary<string, List<int>>();
-
-                    answeredQuestions ??= new Dictionary<string, List<int>>();
-
-                    if (!answeredQuestions.ContainsKey(databankName))
-                        answeredQuestions[databankName] = new List<int>();
-
-                    // Evita duplicatas
-                    if (!answeredQuestions[databankName].Contains(questionNumber))
-                    {
-                        answeredQuestions[databankName].Add(questionNumber);
-                        updates["AnsweredQuestions"] = answeredQuestions;
-                    }
-                }
-
-                transaction.Update(docRef, updates);
-
-                if (UserDataStore.CurrentUserData != null)
-                {
-                    UserDataStore.CurrentUserData.Score = newScore;
-                    UserDataStore.CurrentUserData.WeekScore = newWeekScore;
-                }
-            });
-
-            if (UserDataStore.CurrentUserData != null)
-            {
-                UserDataStore.UpdateScore(UserDataStore.CurrentUserData.Score);
+                Debug.LogError("[FirestoreRepository] Usuário não encontrado na transação.");
+                return;
             }
 
-            Debug.Log($"[FirestoreRepository] UpdateUserScores concluído via transação. Score: {UserDataStore.CurrentUserData?.Score}");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[FirestoreRepository] Erro em UpdateUserScores: {e.Message}");
-            throw;
-        }
+            Debug.Log("[FirestoreRepository] Lendo Score...");
+            int currentScore = snapshot.ContainsField("Score")
+                ? Convert.ToInt32(snapshot.GetValue<object>("Score")) : 0;
+
+            Debug.Log("[FirestoreRepository] Lendo WeekScore...");
+            int currentWeekScore = snapshot.ContainsField("WeekScore")
+                ? Convert.ToInt32(snapshot.GetValue<object>("WeekScore")) : 0;
+
+            int newScore     = Mathf.Max(0, currentScore     + additionalScore);
+            int newWeekScore = Mathf.Max(0, currentWeekScore + additionalScore);
+
+            Debug.Log($"[FirestoreRepository] newScore={newScore}, newWeekScore={newWeekScore}");
+
+            Dictionary<string, object> updates = new Dictionary<string, object>
+            {
+                { "Score",     newScore },
+                { "WeekScore", newWeekScore }
+            };
+
+            if (isCorrect && !string.IsNullOrEmpty(databankName) && questionNumber > 0)
+            {
+                Debug.Log("[FirestoreRepository] Lendo AnsweredQuestions...");
+                Dictionary<string, List<int>> answeredQuestions;
+                try
+                {
+                    answeredQuestions = snapshot.ContainsField("AnsweredQuestions")
+                        ? snapshot.GetValue<Dictionary<string, List<int>>>("AnsweredQuestions")
+                        : null;
+                    Debug.Log($"[FirestoreRepository] AnsweredQuestions lido. null={answeredQuestions == null}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[FirestoreRepository] Erro ao ler AnsweredQuestions: {ex.Message}. Usando vazio.");
+                    answeredQuestions = null;
+                }
+
+                answeredQuestions ??= new Dictionary<string, List<int>>();
+
+                if (!answeredQuestions.ContainsKey(databankName))
+                    answeredQuestions[databankName] = new List<int>();
+
+                if (!answeredQuestions[databankName].Contains(questionNumber))
+                {
+                    answeredQuestions[databankName].Add(questionNumber);
+                    updates["AnsweredQuestions"] = answeredQuestions;
+                }
+            }
+
+            Debug.Log("[FirestoreRepository] Chamando transaction.Update...");
+            transaction.Update(docRef, updates);
+            Debug.Log("[FirestoreRepository] transaction.Update concluído.");
+
+            if (localUserData != null)
+            {
+                localUserData.Score     = newScore;
+                localUserData.WeekScore = newWeekScore;
+                Debug.Log("[FirestoreRepository] localUserData atualizado.");
+            }
+            else
+            {
+                Debug.LogWarning("[FirestoreRepository] localUserData é null dentro da transação.");
+            }
+        });
+
+        if (localUserData != null)
+            UserDataStore.UpdateScore(localUserData.Score);
+
+        Debug.Log($"[FirestoreRepository] UpdateUserScores concluído. Score: {localUserData?.Score}");
     }
+    catch (Exception e)
+    {
+        Debug.LogError($"[FirestoreRepository] Erro em UpdateUserScores: {e.Message}\n{e.StackTrace}");
+        throw;
+    }
+}
+    
 
     public async Task EnsureWeekScoreField()
     {
