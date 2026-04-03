@@ -136,3 +136,76 @@ async function _batchUpdate(db, docs, fields, batchMax) {
     await batch.commit();
   }
 }
+
+// Adicionar temporariamente em functions/index.js
+// Após executar: remover e fazer novo deploy
+
+exports.populateRankingsFromUsers = onRequest(async (req, res) => {
+  const secretKey = process.env.RESET_SECRET_KEY;
+
+  if (!secretKey) {
+    res.status(500).send("RESET_SECRET_KEY não configurada.");
+    return;
+  }
+  if (req.query.key !== secretKey) {
+    res.status(403).send("Acesso não autorizado.");
+    return;
+  }
+
+  try {
+    const db        = admin.firestore();
+    const BATCH_MAX = 450;
+
+    const usersSnap = await db.collection("Users").get();
+
+    if (usersSnap.empty) {
+      res.status(200).send("Nenhum usuário encontrado.");
+      return;
+    }
+
+    let batch     = db.batch();
+    let count     = 0;
+    let total     = 0;
+    let skipped   = 0;
+
+    for (const doc of usersSnap.docs) {
+      const d = doc.data();
+
+      // Pula documentos sem NickName — provavelmente incompletos
+      if (!d.NickName) {
+        skipped++;
+        continue;
+      }
+
+      batch.set(
+        db.collection("Rankings").doc(doc.id),
+        {
+          nickName:        d.NickName        ?? "",
+          score:           d.Score           ?? 0,
+          weekScore:       d.WeekScore       ?? 0,
+          profileImageUrl: d.ProfileImageUrl ?? "",
+          updatedAt:       admin.firestore.FieldValue.serverTimestamp(),
+        }
+      );
+
+      count++;
+      total++;
+
+      if (count >= BATCH_MAX) {
+        await batch.commit();
+        batch = db.batch();
+        count = 0;
+      }
+    }
+
+    if (count > 0) await batch.commit();
+
+    const msg = `Rankings populado: ${total} entradas criadas, ${skipped} ignoradas.`;
+    console.log(`[populateRankings] ${msg}`);
+    res.status(200).send(msg);
+
+  } catch (err) {
+    console.error("[populateRankings] Erro:", err);
+    res.status(500).send(`Erro: ${err.message}`);
+  }
+});
